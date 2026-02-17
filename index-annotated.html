@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="theme-color" content="#000000">
+  <title>Asterism</title>
+  <meta name="description" content="Generative asterism animation - clusters of glowing dots pulsing in concentric rings">
+
+  <!-- ================================================================
+       CSS: THEME & LAYOUT
+       All colors use oklch() via three custom properties (--bg, --fg,
+       --accent) so the entire palette inverts when toggling dark/light.
+       color-mix() derives every opacity variant from those three roots.
+       ================================================================ -->
+  <style>
+    :root { --bg: oklch(0 0 0); --fg: oklch(1 0 0); --accent: oklch(0.7 0.289 39); }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); font-family: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Segoe UI Mono', Menlo, Monaco, Consolas, monospace; transition: background 0.4s; }
+    canvas { display: block; width: 100%; height: 100%; touch-action: none; user-select: none; background: var(--bg); transition: background 0.4s; }
+
+    /* ---------- Controls wrapper & toggle button ---------- */
+    #controls-wrap { position: fixed; bottom: 0; left: 0; right: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; pointer-events: none; }
+    #toggle-btn {
+      pointer-events: auto; margin-bottom: 8px; padding: 8px 20px; border-radius: 9999px;
+      font-size: 12px; font-family: inherit; cursor: pointer; user-select: none;
+      background: color-mix(in oklch, var(--fg), transparent 95%);
+      color: color-mix(in oklch, var(--fg), transparent 65%);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border: 1px solid color-mix(in oklch, var(--fg), transparent 94%);
+      min-height: 44px; min-width: 44px; transition: opacity 0.15s, background 0.4s, color 0.4s, border-color 0.4s;
+    }
+    #toggle-btn:hover { opacity: 0.8; }
+
+    /* ---------- Slider panel (glassmorphic drawer) ---------- */
+    #panel {
+      display: none; pointer-events: auto; width: 100%; max-width: 28rem;
+      padding: 16px 20px 32px; flex-direction: column; gap: 4px;
+      background: color-mix(in oklch, var(--bg), transparent 12%);
+      backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+      border-top: 1px solid color-mix(in oklch, var(--fg), transparent 95%);
+      transition: background 0.4s, border-color 0.4s;
+    }
+    #panel.open { display: flex; }
+
+    /* ---------- Slider components ---------- */
+    .slider-row { display: flex; align-items: center; gap: 12px; }
+    .slider-label { width: 80px; text-align: right; font-size: 11px; color: color-mix(in oklch, var(--fg), transparent 55%); flex-shrink: 0; user-select: none; transition: color 0.4s; }
+    .slider-track {
+      position: relative; flex: 1; display: flex; align-items: center;
+      height: 44px; cursor: pointer; touch-action: none;
+    }
+    .slider-bg { position: absolute; left: 0; right: 0; height: 2px; top: 50%; transform: translateY(-50%); background: color-mix(in oklch, var(--fg), transparent 92%); border-radius: 9999px; transition: background 0.4s; }
+    .slider-fill { position: absolute; left: 0; height: 2px; top: 50%; transform: translateY(-50%); background: color-mix(in oklch, var(--accent), transparent 50%); border-radius: 9999px; }
+    .slider-thumb {
+      position: absolute; width: 14px; height: 14px; top: 50%; transform: translate(-50%, -50%);
+      background: color-mix(in oklch, var(--accent), transparent 15%);
+      border-radius: 50%;
+      box-shadow: 0 0 8px color-mix(in oklch, var(--accent), transparent 60%);
+    }
+    .slider-val { width: 32px; text-align: left; font-size: 11px; color: color-mix(in oklch, var(--fg), transparent 70%); flex-shrink: 0; user-select: none; font-variant-numeric: tabular-nums; transition: color 0.4s; }
+
+    /* ---------- Background toggle button ---------- */
+    .bg-toggle {
+      padding: 4px 14px; border-radius: 9999px; font-family: inherit; font-size: 11px;
+      cursor: pointer; user-select: none; min-height: 28px;
+      background: color-mix(in oklch, var(--fg), transparent 95%);
+      color: color-mix(in oklch, var(--fg), transparent 55%);
+      border: 1px solid color-mix(in oklch, var(--fg), transparent 90%);
+      transition: background 0.4s, color 0.4s, border-color 0.4s;
+    }
+    .bg-toggle:hover { background: color-mix(in oklch, var(--fg), transparent 90%); }
+
+    /* ---------- Last-updated label ---------- */
+    #last-updated { position: fixed; bottom: 12px; left: 12px; z-index: 10; font-size: 10px; color: color-mix(in oklch, var(--fg), transparent 80%); font-family: inherit; pointer-events: none; user-select: none; transition: color 0.4s; }
+  </style>
+</head>
+<body>
+  <canvas id="c" aria-label="Animated asterism generative art" role="img"></canvas>
+  <div id="last-updated"></div>
+
+  <div id="controls-wrap">
+    <button id="toggle-btn">Controls</button>
+    <div id="panel"></div>
+  </div>
+
+  <script>
+
+  // ========================================================================
+  //  TAXONOMY
+  //  The visual is built from three nested layers:
+  //    Dot  - the smallest element; a single tiny circle drawn on the canvas.
+  //    Star - a cluster of dots arranged in concentric sub-rings.
+  //    Ring - a large circular arrangement of stars around the center.
+  //  Visual hierarchy (outside-in):  Ring  >  Star  >  Dot
+  // ========================================================================
+
+
+  // ========================================================================
+  //  LAYOUT CONSTANTS
+  //  Fixed numbers that define how dots are grouped into stars, and how
+  //  stars are arranged into rings. These never change at runtime.
+  // ========================================================================
+
+  // -- Star internals: each star is a cluster of dots in concentric sub-rings --
+  const DOTS_PER_SUBRING = [3, 9, 14, 20, 28];           // dots in each sub-ring (innermost first)
+  const SUBRING_OFFSETS = [0.75, 0.25, 0.75, 0.125, 0.5]; // rotational offset per sub-ring
+
+  const DOT_SUBRING_SPACING = 8;   // px gap between concentric sub-rings of dots within a star
+  const DOT_RADIUS = 8;            // drawn radius of each dot
+  const DOT_INNER_OFFSET = 1;      // radial offset for the innermost sub-ring
+
+  // -- Ring layout: stars are arranged in concentric rings around the center --
+  const MAX_RINGS = 10;            // maximum rings the slider can reach
+  const DEFAULT_RINGS = 4;         // default ring count on load
+  const STAR_SPACING = 100;        // px gap between stars along a ring
+
+  // How many stars sit in each ring (grows with circumference)
+  const STARS_PER_RING = [3, 9, 14, 20, 28, 37, 47, 58, 70, 83];
+  // Rotational offset per ring to avoid a gridded look
+  const RING_OFFSETS = [0.75, 0.25, 0.75, 0.125, 0.5, 0.375, 0.625, 0.875, 0.1875, 0.5625];
+
+  // Derived totals (allocated for MAX_RINGS so the buffers never need to grow)
+  const DOTS_PER_STAR = DOTS_PER_SUBRING.reduce((a, b) => a + b, 0); // 74
+  const MAX_TOTAL_STARS = STARS_PER_RING.reduce((a, b) => a + b, 0); // 369
+  const BUF_SIZE = MAX_TOTAL_STARS + 10;
+
+  const ANIM_FRAMES = 180;
+  const TWO_PI = Math.PI * 2;
+
+
+  // ========================================================================
+  //  UTILITY FUNCTIONS
+  //  Small math helpers used throughout the animation and UI code.
+  //  mulberry32 is a seeded PRNG so the pattern is identical on every load.
+  // ========================================================================
+
+  function mulberry32(seed) {
+    return function () {
+      let t = (seed += 0x6d2b79f5);
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+  function mapVal(v, a1, b1, a2, b2) { return a2 + (b2 - a2) * ((v - a1) / (b1 - a1)); }
+  function normVal(v, a, b) { return (v - a) / (b - a); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+
+  // ========================================================================
+  //  PARAMETERS
+  //  Every slider writes to this single object. The animation loop reads
+  //  from it each frame, so changes are reflected immediately. All values
+  //  are normalized 0-1 except `light` (boolean).
+  // ========================================================================
+
+  const params = { arcMin: 0, arcMax: 0, decay: 0, speed: 0.3, density: 0.5, spread: 0.52, rings: 7/9, lightness: 0.72, chroma: 0.78, hue: 39/360, light: false };
+  const sliderUpdaters = {}; // keyed by param name, set during slider setup
+
+
+  // ========================================================================
+  //  ANIMATION STATE
+  //  Pre-allocated typed arrays of seeded random values. One random float
+  //  per ring, per star, and per dot. These are generated once at startup
+  //  and never change, giving the pattern its deterministic look.
+  //  dotBrightness[] is mutable: it tracks each dot's retained brightness
+  //  for the decay-trail effect.
+  // ========================================================================
+
+  const rng = mulberry32(42);
+  const ringRand = new Float32Array(MAX_RINGS);
+  const starRand = new Float32Array(BUF_SIZE);
+  const totalDotSlots = BUF_SIZE * DOTS_PER_STAR;
+  const dotRand = new Float32Array(totalDotSlots);
+  const dotBrightness = new Float32Array(totalDotSlots);
+  for (let i = 0; i < MAX_RINGS; i++) ringRand[i] = rng();
+  for (let i = 0; i < BUF_SIZE; i++) starRand[i] = rng();
+  for (let i = 0; i < totalDotSlots; i++) dotRand[i] = rng();
+  let time = 0;
+
+
+  // ========================================================================
+  //  CANVAS SETUP
+  //  Creates the drawing context and handles window resizing. The canvas
+  //  is scaled by devicePixelRatio so it stays sharp on retina displays.
+  // ========================================================================
+
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    const w = window.innerWidth, h = window.innerHeight;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+
+  // ========================================================================
+  //  DRAW STAR
+  //  Renders a single star (cluster of dots) at position (x, y).
+  //  For each of the 5 concentric sub-rings inside the star, it walks
+  //  every dot slot and decides whether to light it up based on:
+  //    1. Arc culling   - is the dot within the visible arc fraction?
+  //    2. Wave activation - does the sine-wave phase exceed the threshold?
+  //    3. Decay          - if not activated, fade the stored brightness.
+  //  Visible dots are colored in oklch: lightness and chroma scale with
+  //  brightness, and hue shifts per-dot based on a random offset plus
+  //  a brightness-driven drift.
+  // ========================================================================
+
+  function drawStar(x, y, starIndex, progress, scale, p, effectiveArc) {
+    const arcFrac = effectiveArc;
+    const threshScale = mapVal(p.density, 0, 1, 6, 0);
+    const decaySpeed = mapVal(p.decay, 0, 1, 0.2, 15);
+
+    const wave = normVal(Math.sin(progress * TWO_PI), -1, 1);
+    const baseThresh = mapVal(wave, 0, 1, 0, threshScale + starRand[starIndex % starRand.length] * 2);
+
+    const subringGap = DOT_SUBRING_SPACING * scale;
+    const innerOffset = DOT_INNER_OFFSET * scale;
+    const dotHalfR = (DOT_RADIUS * scale) / 2;
+
+    let di = starIndex * DOTS_PER_STAR;
+    for (let sri = 0; sri < DOTS_PER_SUBRING.length; sri++) {
+      const dotsInSubring = DOTS_PER_SUBRING[sri];
+      if (di + dotsInSubring > dotRand.length) break;
+
+      const freq = Math.floor(Math.max(dotRand[di] * 4 - 2, 0)) + 1;
+      const localOffset = (progress * freq + Math.abs(dotRand[di] / 1.5)) % 1;
+      const ringWeight = mapVal(sri, 0, DOTS_PER_SUBRING.length - 1, 1, 0);
+
+      for (let j = 0; j < dotsInSubring; j++) {
+        const theta = (TWO_PI / dotsInSubring) * j + SUBRING_OFFSETS[sri] * TWO_PI;
+        const rad = subringGap * (sri + 0.5) + innerOffset;
+        const dotX = rad * Math.cos(theta) + x;
+        const dotY = rad * Math.sin(theta) + y;
+
+        // --- Arc culling ---
+        const waveAngle = (localOffset * TWO_PI) % TWO_PI;
+        const dotAngle = ((theta % TWO_PI) + TWO_PI) % TWO_PI;
+        let angleDiff = Math.abs(dotAngle - waveAngle);
+        if (angleDiff > Math.PI) angleDiff = TWO_PI - angleDiff;
+
+        if (angleDiff > arcFrac * Math.PI) {
+          dotBrightness[di] = clamp(dotBrightness[di] - decaySpeed, 0, 100);
+          di++;
+          continue;
+        }
+
+        // --- Wave-based activation ---
+        const rp = normVal(Math.sin(theta + (localOffset + dotRand[di] * TWO_PI) * TWO_PI * 2), -1, 1);
+        const amp = Math.abs(dotRand[di] * rp * rp);
+        const brightness_wave = mapVal(Math.sin(theta + localOffset * TWO_PI), -1, 1, 0, 2 - dotRand[di] + ringWeight / 2) + amp;
+        const vel = Math.cos(theta + localOffset * TWO_PI);
+
+        let br = dotBrightness[di] || 0;
+        if (brightness_wave > baseThresh && vel >= 0) {
+          br = Math.ceil(100 - dotRand[di] * 10 + ringWeight * 20);
+        } else if (brightness_wave > baseThresh && vel < 0) {
+          br = Math.floor(100 + 20 * vel);
+        } else {
+          br = clamp(br - Math.ceil(decaySpeed / (ringWeight + 1)), 0, 50);
+        }
+        if (br < 0) br = 0;
+        dotBrightness[di] = br;
+
+        // --- Quantize and draw ---
+        const finalB = Math.floor(br / 10) * 10;
+
+        if (finalB > 0.5) {
+          const bN = finalB / 100;
+          const L = p.light ? 1 - bN * p.lightness : bN * p.lightness;
+          const C = bN * p.chroma * 0.37;
+          const H = p.hue * 360 + dotRand[di] * 40 + finalB * 0.25 - 32.5;
+          ctx.fillStyle = `oklch(${L.toFixed(2)} ${C.toFixed(3)} ${H.toFixed(1)})`;
+          ctx.beginPath();
+          ctx.arc(dotX, dotY, dotHalfR, 0, TWO_PI);
+          ctx.fill();
+        }
+        di++;
+      }
+    }
+
+  }
+
+
+  // ========================================================================
+  //  MAIN ANIMATION LOOP
+  //  Runs every frame via requestAnimationFrame. Clears the canvas, then
+  //  iterates through each ring and each star within it. A radial sine
+  //  wave modulates each star's visible arc fraction so the pattern
+  //  "breathes" outward from the center. Each star's phase is offset by
+  //  its angular position and a per-ring random value, producing the
+  //  rotating sweep effect.
+  // ========================================================================
+
+  let prevT = performance.now();
+  function frame(now) {
+    const dt = (now - prevT) / 1000;
+    prevT = now;
+    time += dt * mapVal(params.speed, 0, 1, 0.15, 3);
+
+    const w = window.innerWidth, h = window.innerHeight;
+    const scale = Math.min(w, h) / 900;
+    ctx.clearRect(0, 0, w, h);
+
+    const cycleSec = ANIM_FRAMES / 60;
+    const cycleProgress = (time / cycleSec) % 1;
+    const cx = w / 2, cy = h / 2;
+
+    const activeRings = Math.round(mapVal(params.rings, 0, 1, 1, MAX_RINGS));
+    const starGap = STAR_SPACING * scale * mapVal(params.spread, 0, 1, 0.4, 1.6);
+    const maxRingRadius = starGap * (activeRings - 1 + 0.5) + starGap / 4;
+    const arcWavePhase = time / cycleSec * TWO_PI;
+
+    let starIndex = 0;
+    for (let ri = 0; ri < activeRings; ri++) {
+      const starsInRing = STARS_PER_RING[ri];
+      for (let j = 0; j < starsInRing; j++) {
+        const theta = (TWO_PI / starsInRing) * j + RING_OFFSETS[ri] * TWO_PI;
+        const ringRadius = starGap * (ri + 0.5) + starGap / 4;
+        const starX = ringRadius * Math.cos(theta) + cx;
+        const starY = ringRadius * Math.sin(theta) + cy;
+
+        const distNorm = maxRingRadius > 0 ? ringRadius / maxRingRadius : 0;
+        const arcWave = (Math.sin(arcWavePhase - distNorm * TWO_PI) + 1) / 2;
+        const effectiveArc = params.arcMin + (params.arcMax - params.arcMin) * arcWave;
+
+        const starProgress = (cycleProgress + normVal(theta, 0, TWO_PI) + ringRand[ri] + Math.floor((ri * 2) / activeRings)) % 1;
+
+        drawStar(starX, starY, starIndex, starProgress, scale, params, effectiveArc);
+        starIndex++;
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+
+  // ========================================================================
+  //  CONTROLS UI: SLIDER DEFINITIONS
+  //  Each entry maps a param key to a label and optional display formatter.
+  //  The onChange callback on hue and chroma keeps the CSS --accent custom
+  //  property in sync so slider fills and thumbs match the dot color.
+  // ========================================================================
+
+  function updateAccent() {
+    const c = Math.max(params.chroma * 0.37, 0.05);
+    document.documentElement.style.setProperty('--accent', `oklch(0.7 ${c.toFixed(3)} ${params.hue * 360})`);
+  }
+
+  const SLIDERS = [
+    { key: 'rings',      label: 'Rings',        display: v => Math.round(mapVal(v, 0, 1, 1, MAX_RINGS)) },
+    { key: 'arcMin',     label: 'Dot Arc Min' },
+    { key: 'arcMax',     label: 'Dot Arc Max' },
+    { key: 'decay',      label: 'Dot Decay' },
+    { key: 'density',    label: 'Dot Density' },
+    { key: 'speed',      label: 'Speed' },
+    { key: 'spread',     label: 'Star Spread' },
+    { key: 'lightness',  label: 'Lightness' },
+    { key: 'chroma',     label: 'Chroma',      onChange: updateAccent },
+    { key: 'hue',        label: 'Hue',         display: v => Math.round(v * 360), onChange: updateAccent },
+  ];
+
+
+  // ========================================================================
+  //  CONTROLS UI: PANEL & SLIDER CONSTRUCTION
+  //  Builds the bottom drawer that holds all sliders. Each slider is a
+  //  custom pointer-driven control (no <input type="range">) with a thin
+  //  track, accent-colored fill, and a draggable thumb. Pointer capture
+  //  keeps dragging smooth even if the cursor leaves the track.
+  // ========================================================================
+
+  const panel = document.getElementById('panel');
+  const toggleBtn = document.getElementById('toggle-btn');
+  let panelOpen = false;
+
+  toggleBtn.addEventListener('click', () => {
+    panelOpen = !panelOpen;
+    panel.classList.toggle('open', panelOpen);
+    toggleBtn.textContent = panelOpen ? 'Hide' : 'Controls';
+  });
+
+  SLIDERS.forEach(({ key, label, display, onChange }) => {
+    const row = document.createElement('div');
+    row.className = 'slider-row';
+
+    const lbl = document.createElement('span');
+    lbl.className = 'slider-label';
+    lbl.textContent = label;
+
+    const track = document.createElement('div');
+    track.className = 'slider-track';
+    track.setAttribute('role', 'slider');
+    track.setAttribute('aria-label', label);
+    track.setAttribute('aria-valuemin', '0');
+    track.setAttribute('aria-valuemax', '100');
+
+    const bg = document.createElement('div');
+    bg.className = 'slider-bg';
+    const fill = document.createElement('div');
+    fill.className = 'slider-fill';
+    const thumb = document.createElement('div');
+    thumb.className = 'slider-thumb';
+
+    track.append(bg, fill, thumb);
+
+    const valSpan = document.createElement('span');
+    valSpan.className = 'slider-val';
+
+    function updateVisual(v) {
+      const pct = v * 100;
+      fill.style.width = pct + '%';
+      thumb.style.left = pct + '%';
+      const displayVal = display ? display(v) : Math.round(pct);
+      valSpan.textContent = displayVal;
+      track.setAttribute('aria-valuenow', String(displayVal));
+    }
+    updateVisual(params[key]);
+    sliderUpdaters[key] = updateVisual;
+
+    let dragging = false;
+    function setFromX(clientX) {
+      const r = track.getBoundingClientRect();
+      const v = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+      params[key] = v;
+      updateVisual(v);
+      if (onChange) onChange();
+    }
+
+    track.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      track.setPointerCapture(e.pointerId);
+      setFromX(e.clientX);
+    });
+    track.addEventListener('pointermove', (e) => { if (dragging) setFromX(e.clientX); });
+    track.addEventListener('pointerup', () => { dragging = false; });
+    track.addEventListener('pointercancel', () => { dragging = false; });
+
+    row.append(lbl, track, valSpan);
+    panel.appendChild(row);
+  });
+
+
+  // ========================================================================
+  //  BACKGROUND TOGGLE
+  //  A button that flips between dark and light mode by swapping the --bg
+  //  and --fg CSS custom properties. Also inverts the lightness slider so
+  //  dot contrast stays appropriate for the new background.
+  // ========================================================================
+
+  const bgRow = document.createElement('div');
+  bgRow.className = 'slider-row';
+  const bgLabel = document.createElement('span');
+  bgLabel.className = 'slider-label';
+  bgLabel.textContent = 'Background';
+  const bgBtn = document.createElement('button');
+  bgBtn.className = 'bg-toggle';
+  bgBtn.textContent = 'Dark';
+  bgBtn.addEventListener('click', () => {
+    params.light = !params.light;
+    bgBtn.textContent = params.light ? 'Light' : 'Dark';
+    const root = document.documentElement;
+    root.style.setProperty('--bg', params.light ? 'oklch(1 0 0)' : 'oklch(0 0 0)');
+    root.style.setProperty('--fg', params.light ? 'oklch(0 0 0)' : 'oklch(1 0 0)');
+    document.querySelector('meta[name="theme-color"]').content = params.light ? '#ffffff' : '#000000';
+    params.lightness = 1 - params.lightness;
+    if (sliderUpdaters.lightness) sliderUpdaters.lightness(params.lightness);
+  });
+  bgRow.append(bgLabel, bgBtn);
+  panel.appendChild(bgRow);
+
+
+  // ========================================================================
+  //  INTRO ANIMATION
+  //  On page load, arcMin and arcMax start at 0 (blank canvas) and ease
+  //  up to their target values over 2 seconds using an easeInOutQuad
+  //  curve. This creates a smooth "bloom" effect as the pattern fades in.
+  // ========================================================================
+
+  (function () {
+    const targets = { arcMin: 0.10, arcMax: 0.95 };
+    const duration = 2000; // ms
+    const start = performance.now();
+    function ease(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; } // easeInOutQuad
+    function tick(now) {
+      const t = Math.min((now - start) / duration, 1);
+      const e = ease(t);
+      for (const key in targets) {
+        params[key] = targets[key] * e;
+        if (sliderUpdaters[key]) sliderUpdaters[key](params[key]);
+      }
+      if (t < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  })();
+
+
+  // ========================================================================
+  //  LAST UPDATED (GITHUB API)
+  //  Fetches the most recent commit on the main branch and displays the
+  //  committer date in the bottom-left corner. Uses the committer date
+  //  (not author date) so merged PRs show the merge timestamp. Fails
+  //  silently if the API is unreachable or rate-limited.
+  // ========================================================================
+
+  fetch('https://api.github.com/repos/juliankellydesign/juliankellydesign.github.io/commits?per_page=1&sha=main')
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(([c]) => {
+      const d = new Date(c.commit.committer.date);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      document.getElementById('last-updated').textContent = 'Last updated ' + yyyy + '.' + mm + '.' + dd;
+    })
+    .catch(() => {});
+  </script>
+</body>
+</html>
