@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="theme-color" content="#000000">
+  <title>Asterism</title>
+  <meta name="description" content="Generative asterism animation - clusters of glowing dots pulsing in concentric rings">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Segoe UI Mono', Menlo, Monaco, Consolas, monospace; }
+    canvas { display: block; width: 100%; height: 100%; touch-action: none; user-select: none; background: #000; }
+    #controls-wrap { position: fixed; bottom: 0; left: 0; right: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; pointer-events: none; }
+    #toggle-btn {
+      pointer-events: auto; margin-bottom: 8px; padding: 8px 20px; border-radius: 9999px;
+      font-size: 12px; font-family: inherit; cursor: pointer; user-select: none;
+      background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.35);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.06); min-height: 44px; min-width: 44px;
+      transition: opacity 0.15s;
+    }
+    #toggle-btn:hover { opacity: 0.8; }
+    #panel {
+      display: none; pointer-events: auto; width: 100%; max-width: 28rem;
+      padding: 16px 20px 32px; flex-direction: column; gap: 4px;
+      background: rgba(0,0,0,0.88); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    #panel.open { display: flex; }
+    .slider-row { display: flex; align-items: center; gap: 12px; }
+    .slider-label { width: 80px; text-align: right; font-size: 11px; color: rgba(255,255,255,0.45); flex-shrink: 0; user-select: none; }
+    .slider-track {
+      position: relative; flex: 1; display: flex; align-items: center;
+      height: 44px; cursor: pointer; touch-action: none;
+    }
+    .slider-bg { position: absolute; left: 0; right: 0; height: 2px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.08); border-radius: 9999px; }
+    .slider-fill { position: absolute; left: 0; height: 2px; top: 50%; transform: translateY(-50%); background: rgba(255,120,40,0.5); border-radius: 9999px; }
+    .slider-thumb {
+      position: absolute; width: 14px; height: 14px; top: 50%; transform: translate(-50%, -50%);
+      background: rgba(255,140,50,0.85); border-radius: 50%;
+      box-shadow: 0 0 8px rgba(255,100,20,0.4);
+    }
+    .slider-val { width: 32px; text-align: left; font-size: 11px; color: rgba(255,255,255,0.3); flex-shrink: 0; user-select: none; font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body>
+  <canvas id="c" aria-label="Animated asterism generative art" role="img"></canvas>
+
+  <div id="controls-wrap">
+    <button id="toggle-btn">Controls</button>
+    <div id="panel"></div>
+  </div>
+
+  <script>
+  // ==========================================================================
+  //  TAXONOMY
+  //
+  //  Dot  — the smallest element; a single tiny circle drawn on the canvas.
+  //  Star — a cluster of dots arranged in concentric sub-rings.
+  //  Ring — a large circular arrangement of stars around the center.
+  //
+  //  Visual hierarchy (outside → in):  Ring  →  Star  →  Dot
+  // ==========================================================================
+
+  // --- Layout constants ---
+
+  // -- Star internals: each star is a cluster of dots in concentric sub-rings --
+  const DOTS_PER_SUBRING = [3, 9, 14, 20, 28];           // dots in each sub-ring (innermost first)
+  const SUBRING_OFFSETS = [0.75, 0.25, 0.75, 0.125, 0.5]; // rotational offset per sub-ring
+
+  const DOT_SUBRING_SPACING = 8;   // px gap between concentric sub-rings of dots within a star
+  const DOT_RADIUS = 8;            // drawn radius of each dot
+  const DOT_INNER_OFFSET = 1;      // radial offset for the innermost sub-ring
+
+  // -- Ring layout: stars are arranged in concentric rings around the center --
+  const MAX_RINGS = 10;            // maximum rings the slider can reach
+  const DEFAULT_RINGS = 4;         // default ring count on load
+  const STAR_SPACING = 100;        // px gap between stars along a ring
+
+  // How many stars sit in each ring (grows with circumference)
+  const STARS_PER_RING = [3, 9, 14, 20, 28, 37, 47, 58, 70, 83];
+  // Rotational offset per ring to avoid a gridded look
+  const RING_OFFSETS = [0.75, 0.25, 0.75, 0.125, 0.5, 0.375, 0.625, 0.875, 0.1875, 0.5625];
+
+  // Derived totals (allocated for MAX_RINGS so the buffers never need to grow)
+  const DOTS_PER_STAR = DOTS_PER_SUBRING.reduce((a, b) => a + b, 0); // 74
+  const MAX_TOTAL_STARS = STARS_PER_RING.reduce((a, b) => a + b, 0); // 369
+  const BUF_SIZE = MAX_TOTAL_STARS + 10;
+
+  const ANIM_FRAMES = 180;
+  const TWO_PI = Math.PI * 2;
+
+  // --- Utility functions ---
+
+  // Seeded PRNG (mulberry32) — deterministic randomness so the pattern is stable
+  function mulberry32(seed) {
+    return function () {
+      let t = (seed += 0x6d2b79f5);
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // HSB → RGB (H: 0-100, S: 0-100, B: 0-100)
+  function hsbToRgb(h, s, b) {
+    const hue = ((h % 100) + 100) % 100;
+    const hN = hue / 100, sN = s / 100, bN = b / 100;
+    if (sN === 0) { const v = Math.round(bN * 255); return [v, v, v]; }
+    const i = Math.floor(hN * 6), f = hN * 6 - i;
+    const p = bN * (1 - sN), q = bN * (1 - f * sN), t = bN * (1 - (1 - f) * sN);
+    let r, g, bl;
+    switch (i % 6) {
+      case 0: r = bN; g = t; bl = p; break;
+      case 1: r = q; g = bN; bl = p; break;
+      case 2: r = p; g = bN; bl = t; break;
+      case 3: r = p; g = q; bl = bN; break;
+      case 4: r = t; g = p; bl = bN; break;
+      case 5: r = bN; g = p; bl = q; break;
+      default: r = 0; g = 0; bl = 0;
+    }
+    return [Math.round(r * 255), Math.round(g * 255), Math.round(bl * 255)];
+  }
+
+  function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+  function mapVal(v, a1, b1, a2, b2) { return a2 + (b2 - a2) * ((v - a1) / (b1 - a1)); }
+  function normVal(v, a, b) { return (v - a) / (b - a); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  // --- Parameters (controlled by sliders) ---
+  // rings: 0..1 maps to 1..MAX_RINGS (default → 4)
+  const params = { arcMin: 0.10, arcMax: 0.95, decay: 0, speed: 0.3, density: 0.5, spread: 0.52, glow: 0, rings: 7/9 };
+
+  // --- Animation state ---
+  // Pre-computed random values, seeded so every load looks the same.
+  const rng = mulberry32(42);
+  const ringRand = new Float32Array(MAX_RINGS);            // one random value per ring (shared by all stars in a ring)
+  const starRand = new Float32Array(BUF_SIZE);             // one random value per star
+  const totalDotSlots = BUF_SIZE * DOTS_PER_STAR;
+  const dotRand = new Float32Array(totalDotSlots);         // one random value per dot
+  const dotBrightness = new Float32Array(totalDotSlots);   // retained brightness per dot (for decay trails)
+  for (let i = 0; i < MAX_RINGS; i++) ringRand[i] = rng();
+  for (let i = 0; i < BUF_SIZE; i++) starRand[i] = rng();
+  for (let i = 0; i < totalDotSlots; i++) dotRand[i] = rng();
+  let time = 0;
+
+  // --- Canvas setup ---
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    const w = window.innerWidth, h = window.innerHeight;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // --- Draw a single star (cluster of dots) ---
+  // effectiveArc: 0..1 fraction of each sub-ring arc that's visible (computed per-star by radial wave)
+  function drawStar(x, y, starIndex, progress, scale, p, effectiveArc, glowR) {
+    const arcFrac = effectiveArc;                         // fraction of each sub-ring arc that's visible
+    const threshScale = mapVal(p.density, 0, 1, 6, 0);   // wave activation threshold (lower = more dots)
+    const decaySpeed = mapVal(p.decay, 0, 1, 0.2, 15);   // how fast dots fade out
+
+    // Sine wave drives dot activation across the star's cycle
+    const wave = normVal(Math.sin(progress * TWO_PI), -1, 1);
+    const baseThresh = mapVal(wave, 0, 1, 0, threshScale + starRand[starIndex % starRand.length] * 2);
+
+    const subringGap = DOT_SUBRING_SPACING * scale;
+    const innerOffset = DOT_INNER_OFFSET * scale;
+    const dotHalfR = (DOT_RADIUS * scale) / 2;
+
+    // Apply glow (canvas shadow) if enabled
+    if (glowR > 0) {
+      ctx.shadowColor = 'rgba(255,80,10,0.4)';
+      ctx.shadowBlur = glowR * scale;
+    }
+
+    // Walk through each sub-ring of dots within this star
+    let di = starIndex * DOTS_PER_STAR; // dot index into the flat random/brightness arrays
+    for (let sri = 0; sri < DOTS_PER_SUBRING.length; sri++) {
+      const dotsInSubring = DOTS_PER_SUBRING[sri];
+      if (di + dotsInSubring > dotRand.length) break;
+
+      // Each sub-ring has its own wave frequency and phase offset
+      const freq = Math.floor(Math.max(dotRand[di] * 4 - 2, 0)) + 1;
+      const localOffset = (progress * freq + Math.abs(dotRand[di] / 1.5)) % 1;
+      // Weighting: inner sub-rings are brighter (ringWeight goes 1 → 0)
+      const ringWeight = mapVal(sri, 0, DOTS_PER_SUBRING.length - 1, 1, 0);
+
+      // Place each dot around the sub-ring
+      for (let j = 0; j < dotsInSubring; j++) {
+        const theta = (TWO_PI / dotsInSubring) * j + SUBRING_OFFSETS[sri] * TWO_PI;
+        const rad = subringGap * (sri + 0.5) + innerOffset;
+        const dotX = rad * Math.cos(theta) + x;
+        const dotY = rad * Math.sin(theta) + y;
+
+        // --- Arc culling: only draw dots within the visible arc ---
+        const waveAngle = (localOffset * TWO_PI) % TWO_PI;
+        const dotAngle = ((theta % TWO_PI) + TWO_PI) % TWO_PI;
+        let angleDiff = Math.abs(dotAngle - waveAngle);
+        if (angleDiff > Math.PI) angleDiff = TWO_PI - angleDiff;
+
+        if (angleDiff > arcFrac * Math.PI) {
+          // Outside the visible arc — just decay the dot's stored brightness
+          dotBrightness[di] = clamp(dotBrightness[di] - decaySpeed, 0, 100);
+          di++;
+          continue;
+        }
+
+        // --- Dot activation (wave-based) ---
+        const rp = normVal(Math.sin(theta + (localOffset + dotRand[di] * TWO_PI) * TWO_PI * 2), -1, 1);
+        const amp = Math.abs(dotRand[di] * rp * rp);
+        const brightness_wave = mapVal(Math.sin(theta + localOffset * TWO_PI), -1, 1, 0, 2 - dotRand[di] + ringWeight / 2) + amp;
+        const vel = Math.cos(theta + localOffset * TWO_PI);
+
+        let br = dotBrightness[di] || 0;
+        if (brightness_wave > baseThresh && vel >= 0) {
+          br = Math.ceil(100 - dotRand[di] * 10 + ringWeight * 20);
+        } else if (brightness_wave > baseThresh && vel < 0) {
+          br = Math.floor(100 + 20 * vel);
+        } else {
+          br = clamp(br - Math.ceil(decaySpeed / (ringWeight + 1)), 0, 50);
+        }
+        if (br < 0) br = 0;
+        dotBrightness[di] = br;
+
+        // --- Final brightness (quantized to steps of 10) ---
+        const finalB = Math.floor(br / 10) * 10;
+
+        // --- Draw the dot ---
+        if (finalB > 0.5) {
+          const qB = Math.floor(finalB / 10) * 10;
+          const hue = Math.floor(10 * dotRand[di] + finalB / 10) - 10;
+          const [r, g, b] = hsbToRgb(hue, 100, qB);
+          ctx.fillStyle = `rgb(${r},${g},${b})`;
+          ctx.beginPath();
+          ctx.arc(dotX, dotY, dotHalfR, 0, TWO_PI);
+          ctx.fill();
+        }
+        di++;
+      }
+    }
+
+    if (glowR > 0) {
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  // --- Main animation loop ---
+  let prevT = performance.now();
+  function frame(now) {
+    const dt = (now - prevT) / 1000;
+    prevT = now;
+    time += dt * mapVal(params.speed, 0, 1, 0.15, 3);
+
+    const w = window.innerWidth, h = window.innerHeight;
+    const scale = Math.min(w, h) / 900;
+    ctx.clearRect(0, 0, w, h);
+
+    const cycleSec = ANIM_FRAMES / 60; // seconds per animation cycle at base speed
+    const cycleProgress = (time / cycleSec) % 1;
+    const cx = w / 2, cy = h / 2;
+
+    // Current ring count from the slider (1..MAX_RINGS)
+    const activeRings = Math.round(mapVal(params.rings, 0, 1, 1, MAX_RINGS));
+
+    // Star spacing along each ring, affected by the "spread" slider
+    const starGap = STAR_SPACING * scale * mapVal(params.spread, 0, 1, 0.4, 1.6);
+
+    const maxRingRadius = starGap * (activeRings - 1 + 0.5) + starGap / 4;
+    const glowR = params.glow * 12;
+
+    // Arc wave: a sine wave radiating outward from center, synced to animation cycle.
+    // Each star's visible arc oscillates between arcMin and arcMax, with inner stars
+    // leading and outer stars lagging — creating a breathing/pulsing radial effect.
+    const arcWavePhase = time / cycleSec * TWO_PI;
+
+    // Walk through each ring, then each star in that ring
+    let starIndex = 0;
+    for (let ri = 0; ri < activeRings; ri++) {
+      const starsInRing = STARS_PER_RING[ri];
+      for (let j = 0; j < starsInRing; j++) {
+        // Place this star around the ring
+        const theta = (TWO_PI / starsInRing) * j + RING_OFFSETS[ri] * TWO_PI;
+        const ringRadius = starGap * (ri + 0.5) + starGap / 4;
+        const starX = ringRadius * Math.cos(theta) + cx;
+        const starY = ringRadius * Math.sin(theta) + cy;
+
+        // Radial arc wave: stars closer to center lead, outer stars lag
+        const distNorm = maxRingRadius > 0 ? ringRadius / maxRingRadius : 0;
+        const arcWave = (Math.sin(arcWavePhase - distNorm * TWO_PI) + 1) / 2; // 0..1
+        const effectiveArc = params.arcMin + (params.arcMax - params.arcMin) * arcWave;
+
+        // All stars in a ring share the same random phase offset (ringRand),
+        // so the wave front sweeps coherently around each ring (the "rotating" look).
+        // Integer division on the ring term matches the original Processing sketch.
+        const starProgress = (cycleProgress + normVal(theta, 0, TWO_PI) + ringRand[ri] + Math.floor((ri * 2) / activeRings)) % 1;
+
+        drawStar(starX, starY, starIndex, starProgress, scale, params, effectiveArc, glowR);
+        starIndex++;
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // --- Controls UI ---
+  const SLIDERS = [
+    { key: 'rings',   label: 'Rings',        display: v => Math.round(mapVal(v, 0, 1, 1, MAX_RINGS)) },
+    { key: 'arcMin',  label: 'Dot Arc Min' },
+    { key: 'arcMax',  label: 'Dot Arc Max' },
+    { key: 'decay',   label: 'Dot Decay' },
+    { key: 'density', label: 'Dot Density' },
+    { key: 'speed',   label: 'Speed' },
+    { key: 'spread',  label: 'Star Spread' },
+    { key: 'glow',    label: 'Dot Glow' },
+  ];
+
+  const panel = document.getElementById('panel');
+  const toggleBtn = document.getElementById('toggle-btn');
+  let panelOpen = false;
+
+  toggleBtn.addEventListener('click', () => {
+    panelOpen = !panelOpen;
+    panel.classList.toggle('open', panelOpen);
+    toggleBtn.textContent = panelOpen ? 'Hide' : 'Controls';
+  });
+
+  SLIDERS.forEach(({ key, label, display }) => {
+    const row = document.createElement('div');
+    row.className = 'slider-row';
+
+    const lbl = document.createElement('span');
+    lbl.className = 'slider-label';
+    lbl.textContent = label;
+
+    const track = document.createElement('div');
+    track.className = 'slider-track';
+    track.setAttribute('role', 'slider');
+    track.setAttribute('aria-label', label);
+    track.setAttribute('aria-valuemin', '0');
+    track.setAttribute('aria-valuemax', '100');
+
+    const bg = document.createElement('div');
+    bg.className = 'slider-bg';
+    const fill = document.createElement('div');
+    fill.className = 'slider-fill';
+    const thumb = document.createElement('div');
+    thumb.className = 'slider-thumb';
+
+    track.append(bg, fill, thumb);
+
+    const valSpan = document.createElement('span');
+    valSpan.className = 'slider-val';
+
+    function updateVisual(v) {
+      const pct = v * 100;
+      fill.style.width = pct + '%';
+      thumb.style.left = pct + '%';
+      const displayVal = display ? display(v) : Math.round(pct);
+      valSpan.textContent = displayVal;
+      track.setAttribute('aria-valuenow', String(displayVal));
+    }
+    updateVisual(params[key]);
+
+    let dragging = false;
+    function setFromX(clientX) {
+      const r = track.getBoundingClientRect();
+      const v = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+      params[key] = v;
+      updateVisual(v);
+    }
+
+    track.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      track.setPointerCapture(e.pointerId);
+      setFromX(e.clientX);
+    });
+    track.addEventListener('pointermove', (e) => { if (dragging) setFromX(e.clientX); });
+    track.addEventListener('pointerup', () => { dragging = false; });
+    track.addEventListener('pointercancel', () => { dragging = false; });
+
+    row.append(lbl, track, valSpan);
+    panel.appendChild(row);
+  });
+  </script>
+</body>
+</html>
