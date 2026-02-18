@@ -8,25 +8,126 @@
   <title>Julian Francis Kelly</title>
   <meta name="description" content="Generative asterism animation - clusters of glowing dots pulsing in concentric rings">
   <style>
-    :root { --bg: #000; --fg: oklch(1 0 0); --accent: oklch(0.7 0.337 28); --container-bg: oklch(0.193 0.005 67.517); }
-    @media (prefers-color-scheme: light) { :root { --bg: #fff; --fg: oklch(0 0 0); --accent: oklch(0.7 0.307 78); --container-bg: oklch(0.948 0.004 106.475); } }
+    :root {
+      --bg: #000;
+      --fg: oklch(1 0 0);
+      --accent: oklch(0.7 0.337 28);
+      --container-bg: oklch(0.193 0.005 67.517);
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #fff;
+        --fg: oklch(0 0 0);
+        --accent: oklch(0.7 0.307 78);
+        --container-bg: oklch(0.948 0.004 106.475);
+      }
+    }
+    @font-face {
+      font-family: 'Karl';
+      src: url('karl-medium.otf');
+      font-weight: 500;
+    }
+    @font-face {
+      font-family: 'Karl';
+      src: url('karl-bold.otf');
+      font-weight: 700;
+    }
+
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); font-family: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Segoe UI Mono', Menlo, Monaco, Consolas, monospace; transition: background 0.4s; }
-    #canvas-wrap { position: fixed; top: 16px; left: 16px; right: 16px; bottom: 16px; border-radius: 16px; overflow: hidden; background: var(--container-bg); transition: background 0.4s; }
-    canvas { display: block; width: 100%; height: 100%; touch-action: none; user-select: none; }
-    #controls-wrap { position: fixed; bottom: 0; left: 0; right: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; pointer-events: none; }
+
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      background: var(--bg);
+      font-family: 'Karl', sans-serif;
+      transition: background 0.4s;
+    }
+
+    #canvas-wrap {
+      position: fixed; inset: 16px;
+      border-radius: 16px; overflow: hidden;
+      background: var(--container-bg);
+      transition: background 0.4s;
+    }
+
+    canvas {
+      display: block; width: 100%; height: 100%;
+      touch-action: none; user-select: none;
+    }
+
+    /* Content overlay */
+
+    .content-overlay {
+      position: absolute; inset: 16px;
+      pointer-events: none;
+      display: flex; flex-direction: column; justify-content: space-between;
+      z-index: 1;
+    }
+
+    .content-top { display: flex; gap: 12px; flex-wrap: wrap; }
+
+    .content-bottom {
+      display: flex; justify-content: space-between; align-items: flex-end;
+    }
+
+    .content-left { display: flex; flex-direction: column; gap: 12px; }
+
+    .content-right {
+      display: flex; flex-direction: column; align-items: flex-end; gap: 12px;
+      pointer-events: auto;
+    }
+
+    .tag {
+      padding: 8px 12px;
+      font-size: 15px; line-height: 20px;
+      background: var(--container-bg); color: var(--fg);
+      width: fit-content; font-family: inherit;
+      transition: background 0.4s, color 0.4s;
+    }
+
+    .tag.accent {
+      background: var(--accent); color: #fff;
+      transition: background 0.4s;
+    }
+
+    .social-icons { display: flex; gap: 12px; }
+    .social-icons a {
+      display: flex; align-items: center; justify-content: center;
+      color: var(--fg); transition: color 0.4s;
+    }
+    .social-icons svg { width: 20px; height: 20px; fill: currentColor; }
+
+    #last-updated {
+      font-size: 15px; line-height: 20px;
+      color: var(--fg); font-family: inherit;
+      user-select: none; transition: color 0.4s;
+    }
+
+    /* Controls panel */
+
+    #controls-wrap {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+      display: flex; flex-direction: column; align-items: center;
+      pointer-events: none;
+    }
+
     #toggle-btn {
-      pointer-events: auto; margin-bottom: 8px; padding: 8px 20px; border-radius: 9999px;
-      font-size: 12px; font-family: inherit; cursor: pointer; user-select: none;
+      pointer-events: auto;
+      margin-bottom: 8px; padding: 8px 20px; border-radius: 9999px;
+      font-size: 12px; font-family: inherit;
+      cursor: pointer; user-select: none;
       background: color-mix(in oklch, var(--fg), transparent 95%);
       color: color-mix(in oklch, var(--fg), transparent 65%);
       backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
       border: 1px solid color-mix(in oklch, var(--fg), transparent 94%);
-      min-height: 44px; min-width: 44px; transition: opacity 0.15s, background 0.4s, color 0.4s, border-color 0.4s;
+      min-height: 44px; min-width: 44px;
+      transition: opacity 0.15s, background 0.4s, color 0.4s, border-color 0.4s;
     }
     #toggle-btn:hover { opacity: 0.8; }
+
     #panel {
-      display: none; pointer-events: auto; width: 100%; max-width: 28rem;
+      display: none; pointer-events: auto;
+      width: 100%; max-width: 28rem;
       padding: 16px 20px 32px; flex-direction: column; gap: 4px;
       background: color-mix(in oklch, var(--bg), transparent 12%);
       backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
@@ -34,23 +135,53 @@
       transition: background 0.4s, border-color 0.4s;
     }
     #panel.open { display: flex; }
+
     .slider-row { display: flex; align-items: center; gap: 12px; }
-    .slider-label { width: 80px; text-align: right; font-size: 11px; color: color-mix(in oklch, var(--fg), transparent 55%); flex-shrink: 0; user-select: none; transition: color 0.4s; }
+
+    .slider-label {
+      width: 80px; text-align: right; font-size: 11px;
+      color: color-mix(in oklch, var(--fg), transparent 55%);
+      flex-shrink: 0; user-select: none; transition: color 0.4s;
+    }
+
     .slider-track {
-      position: relative; flex: 1; display: flex; align-items: center;
+      position: relative; flex: 1;
+      display: flex; align-items: center;
       height: 44px; cursor: pointer; touch-action: none;
     }
-    .slider-bg { position: absolute; left: 0; right: 0; height: 2px; top: 50%; transform: translateY(-50%); background: color-mix(in oklch, var(--fg), transparent 92%); border-radius: 9999px; transition: background 0.4s; }
-    .slider-fill { position: absolute; left: 0; height: 2px; top: 50%; transform: translateY(-50%); background: color-mix(in oklch, var(--accent), transparent 50%); border-radius: 9999px; }
+
+    .slider-bg {
+      position: absolute; left: 0; right: 0;
+      height: 2px; top: 50%; transform: translateY(-50%);
+      background: color-mix(in oklch, var(--fg), transparent 92%);
+      border-radius: 9999px; transition: background 0.4s;
+    }
+
+    .slider-fill {
+      position: absolute; left: 0;
+      height: 2px; top: 50%; transform: translateY(-50%);
+      background: color-mix(in oklch, var(--accent), transparent 50%);
+      border-radius: 9999px;
+    }
+
     .slider-thumb {
-      position: absolute; width: 14px; height: 14px; top: 50%; transform: translate(-50%, -50%);
+      position: absolute; width: 14px; height: 14px;
+      top: 50%; transform: translate(-50%, -50%);
       background: color-mix(in oklch, var(--accent), transparent 15%);
       border-radius: 50%;
       box-shadow: 0 0 8px color-mix(in oklch, var(--accent), transparent 60%);
     }
-    .slider-val { width: 32px; text-align: left; font-size: 11px; color: color-mix(in oklch, var(--fg), transparent 70%); flex-shrink: 0; user-select: none; font-variant-numeric: tabular-nums; transition: color 0.4s; }
+
+    .slider-val {
+      width: 32px; text-align: left; font-size: 11px;
+      color: color-mix(in oklch, var(--fg), transparent 70%);
+      flex-shrink: 0; user-select: none;
+      font-variant-numeric: tabular-nums; transition: color 0.4s;
+    }
+
     .bg-toggle {
-      padding: 4px 14px; border-radius: 9999px; font-family: inherit; font-size: 11px;
+      padding: 4px 14px; border-radius: 9999px;
+      font-family: inherit; font-size: 11px;
       cursor: pointer; user-select: none; min-height: 28px;
       background: color-mix(in oklch, var(--fg), transparent 95%);
       color: color-mix(in oklch, var(--fg), transparent 55%);
@@ -58,14 +189,36 @@
       transition: background 0.4s, color 0.4s, border-color 0.4s;
     }
     .bg-toggle:hover { background: color-mix(in oklch, var(--fg), transparent 90%); }
-    #last-updated { position: fixed; bottom: 12px; left: 12px; z-index: 10; font-size: 10px; color: color-mix(in oklch, var(--fg), transparent 80%); font-family: inherit; pointer-events: none; user-select: none; transition: color 0.4s; }
   </style>
 </head>
 <body>
   <div id="canvas-wrap">
     <canvas id="c" aria-label="Animated asterism generative art" role="img"></canvas>
+    <div class="content-overlay">
+      <div class="content-top">
+        <span class="tag accent">Julian Francis Kelly</span>
+        <span class="tag">Interaction Design</span>
+      </div>
+      <div class="content-bottom">
+        <div class="content-left">
+          <span class="tag">Hello!</span>
+          <span class="tag">I work across motion, visual, and interaction design, each informing the others.</span>
+          <span class="tag">Currently, I'm doing all that at Shopify.</span>
+          <span class="tag">I've designed for Conductor, New Computer, Net, Cosmos, Messenger,<br>Heart Mountain, The New York Times, and many others.</span>
+          <span class="tag">I even designed a logo for a one-hole golf course.</span>
+          <span class="tag">Each year I teach at the Copenhagen Institute of Interaction Design.</span>
+          <span class="tag">I hold a BFA in Graphic Design from RISD.</span>
+        </div>
+        <div class="content-right">
+          <div class="social-icons">
+            <a href="https://twitter.com/juliankelly" target="_blank" rel="noopener" aria-label="Twitter"><svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+            <a href="https://bsky.app/" target="_blank" rel="noopener" aria-label="Bluesky"><svg viewBox="0 0 24 24"><path d="M12 10.8c-1.087-2.114-4.046-6.053-6.798-7.995C2.566.944 1.561 1.266.902 1.565.139 1.908 0 3.08 0 3.768c0 .69.378 5.65.624 6.479.785 2.627 3.601 3.476 6.178 3.126-4.52.646-8.012 2.78-4.333 8.627C5.608 26.515 10.5 20.2 12 17.376c1.5 2.824 6.063 8.676 9.531 4.624 3.68-5.848.188-7.98-4.333-8.627 2.577.35 5.393-.499 6.178-3.126C23.622 9.418 24 4.458 24 3.768c0-.688-.139-1.86-.902-2.203-.659-.3-1.664-.62-4.3 1.24C16.046 4.748 13.087 8.687 12 10.8"/></svg></a>
+          </div>
+          <span class="tag" id="last-updated"></span>
+        </div>
+      </div>
+    </div>
   </div>
-  <div id="last-updated"></div>
 
   <div id="controls-wrap">
     <button id="toggle-btn">Controls</button>
