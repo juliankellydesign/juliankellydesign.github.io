@@ -55,6 +55,7 @@
     canvas {
       display: block; width: 100%; height: 100%;
       touch-action: none; user-select: none;
+      z-index: 500;
     }
 
     /* Content overlay */
@@ -63,7 +64,7 @@
       position: absolute; inset: 16px;
       pointer-events: none;
       display: flex; flex-direction: column; justify-content: space-between;
-      z-index: 1;
+      z-index: -10;
     }
 
     .content-top { display: flex; gap: 12px; flex-wrap: wrap; }
@@ -196,7 +197,7 @@
 </head>
 <body>
   <div id="canvas-wrap">
-    <canvas id="c" aria-label="Animated asterism generative art" role="img"></canvas>
+    
     <div class="content-overlay">
       <div class="content-top">
         <span class="tag accent">Julian Francis Kelly</span>
@@ -221,6 +222,7 @@
         </div>
       </div>
     </div>
+    <canvas id="c" role="presentation"></canvas>
   </div>
 
   <div id="controls-wrap">
@@ -289,7 +291,7 @@
   const LCH_DARK  = { lightness: 0.71, chroma: 0.79, hue: 45/360 };
   const LCH_LIGHT = { lightness: 0.71, chroma: 0.79, hue: 45/360 };
   const systemLight = window.matchMedia('(prefers-color-scheme: light)').matches;
-  const params = { arcMin: 0, arcMax: 0, decay: 0.10, speed: 0.3, density: 0.30, spread: 0.52, rings: 7/9, ...(systemLight ? LCH_LIGHT : LCH_DARK), light: systemLight };
+  const params = { arcMin: 0, arcMax: 0, decay: 0, speed: 0.3, density: 0.30, spread: 0.52, rings: 7/9, ...(systemLight ? LCH_LIGHT : LCH_DARK), light: systemLight };
   const sliderUpdaters = {}; // keyed by param name, set during slider setup
 
   // --- Animation state ---
@@ -568,6 +570,7 @@
     root.style.setProperty('--bg', params.light ? '#fff' : '#000');
     root.style.setProperty('--fg', params.light ? 'oklch(0 0 0)' : 'oklch(1 0 0)');
     root.style.setProperty('--container-bg', params.light ? 'oklch(0.948 0.004 106.475)' : 'oklch(0.193 0.005 67.517)');
+    root.style.setProperty('--tag-bg', params.light ? '#fff' : 'oklch(0.241 0.008 4.059)');
     document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.content = params.light ? '#f7f6f2' : '#302a25');
     const preset = params.light ? LCH_LIGHT : LCH_DARK;
     for (const k in preset) {
