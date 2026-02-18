@@ -13,7 +13,7 @@
       --fg: oklch(0.948 0.004 106.475);
       --accent: oklch(0.7 0.337 28);
       --container-bg: oklch(0.193 0.005 67.517);
-      --tag-bg: oklch(0.241 0.008 4.059);
+      --tag-bg: oklch(0.3 0.008 4.059);
     }
     @media (prefers-color-scheme: light) {
       :root {
@@ -35,6 +35,8 @@
       font-weight: 700;
     }
 
+
+    ::selection { background: var(--accent); color: #fff; }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -68,18 +70,26 @@
       z-index: -10;
     }
 
-    .content-top { display: flex; gap: 12px; flex-wrap: wrap; }
+    .content-top {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: space-between;
+    }
+    .content-top-left { display: flex; gap: 12px; flex-wrap: wrap; }
+    .content-top-right { display: flex; gap: 12px; align-items: flex-start; }
+    @media (max-width: 600px) {
+      .content-top {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
 
     .content-bottom {
-      display: flex; justify-content: space-between; align-items: flex-end;
+      display: flex; align-items: flex-end;
     }
 
     .content-left { display: flex; flex-direction: column; gap: 12px; }
-
-    .content-right {
-      display: flex; flex-direction: column; align-items: flex-end; gap: 12px;
-      pointer-events: auto;
-    }
 
     .tag {
       padding: 8px 12px;
@@ -105,12 +115,43 @@
       border-bottom: 2px dotted color-mix(in oklch, var(--fg), transparent 0%);
     }
 
+    #theme-toggle {
+      display: flex; align-items: center; justify-content: center;
+      background: var(--tag-bg); border: none; border-radius: 4px;
+      padding: 8px; cursor: pointer;
+      color: var(--fg); transition: background 0.4s, color 0.4s;
+    }
+    #theme-toggle svg { width: 20px; height: 20px; fill: currentColor; }
+    #theme-toggle .icon-sun { display: none; }
+    #theme-toggle .icon-moon { display: block; }
+    [data-theme="light"] #theme-toggle .icon-sun { display: block; }
+    [data-theme="light"] #theme-toggle .icon-moon { display: none; }
+
     .social-icons { display: flex; gap: 12px; }
     .social-icons a {
       display: flex; align-items: center; justify-content: center;
       color: var(--fg); transition: color 0.4s;
     }
-    .social-icons svg { width: 20px; height: 20px; fill: currentColor; }
+    .social-icons svg { width: 20px; height: 20px; fill: color-mix(in oklch, var(--fg), transparent 50%); }
+
+    .social-icons span {
+      background: color-mix(in oklch, var(--tag-bg), transparent 50%);
+    }
+
+    .social-icons span svg {
+      margin-right: 6px;
+    }
+
+    .social-icons span:hover {
+      background-color: var(--tag-bg);
+    }
+
+    .social-icons span a {
+      border-bottom: none;
+    }
+    .social-icons span a:hover {
+      border-bottom: none;
+    }
 
     #last-updated {
       font-size: 15px; line-height: 20px;
@@ -137,6 +178,7 @@
       border: 1px solid color-mix(in oklch, var(--fg), transparent 94%);
       min-height: 44px; min-width: 44px;
       transition: opacity 0.15s, background 0.4s, color 0.4s, border-color 0.4s;
+      display: none;
     }
     #toggle-btn:hover { opacity: 0.8; }
 
@@ -211,25 +253,35 @@
     
     <div class="content-overlay">
       <div class="content-top">
-        <span class="tag accent">Julian Francis Kelly</span>
-        <span class="tag">Interaction Designer</span>
+        <div class="content-top-left">
+          <span class="tag accent">Julian Francis Kelly</span>
+          <span class="tag">Interaction Designer</span>
+        </div>
+        <div class="content-top-right">
+          <span class="tag" id="last-updated"></span>
+          <button id="theme-toggle" aria-label="Toggle theme">
+            <svg class="icon-sun" viewBox="0 0 20 20"><path d="M10.833 1.667a.833.833 0 1 0-1.666 0v.833a.833.833 0 0 0 1.666 0v-.833ZM10.833 17.5a.833.833 0 1 0-1.666 0v.833a.833.833 0 0 0 1.666 0V17.5ZM16.48 3.52a.833.833 0 0 0-1.178 0l-.59.59a.833.833 0 0 0 1.178 1.179l.59-.59a.833.833 0 0 0 0-1.179ZM5.29 15.89a.833.833 0 0 0-1.179-1.179l-.59.59a.833.833 0 0 0 1.179 1.179l.59-.59ZM16.666 10a.833.833 0 0 1 .834-.833h.833a.833.833 0 0 1 0 1.666H17.5A.833.833 0 0 1 16.666 10ZM1.666 9.167a.833.833 0 1 0 0 1.666h.834a.833.833 0 0 0 0-1.666h-.834ZM14.71 14.71a.833.833 0 0 1 1.179 0l.59.59a.833.833 0 0 1-1.179 1.179l-.59-.59a.833.833 0 0 1 0-1.179ZM4.697 3.52a.833.833 0 0 0-1.178 1.178l.59.59a.833.833 0 0 0 1.179-1.178l-.59-.59ZM6.464 6.465a5 5 0 1 1 7.071 7.07 5 5 0 0 1-7.07-7.07Z"/></svg>
+            <svg class="icon-moon" viewBox="0 0 20 20"><path d="M10.043 3a.833.833 0 0 0-.756-1.304C5.018 2.058 1.667 5.636 1.667 10c0 4.602 3.73 8.33 8.332 8.33 4.362 0 7.94-3.352 8.301-7.62a.833.833 0 0 0-1.303-.757A5.833 5.833 0 0 1 10.043 3Z"/></svg>
+          </button>
+        </div>
       </div>
       <div class="content-bottom">
         <div class="content-left">
           <span class="tag">Welcome!</span>
           <span class="tag">I work across motion, visual, and interaction design.</span>
-          <span class="tag">Right now, I'm that at <a href="https://shop.app" target="_blank" rel="noopener">Shopify</a>.</span>
+          <span class="tag">Currently, I'm at <a href="https://shop.app" target="_blank" rel="noopener">Shopify</a>.</span>
           <span class="tag">I've designed for <a href="https://conductor.build" target="_blank" rel="noopener">Conductor</a>, <a href="https://techcrunch.com/2024/06/21/dots-ai-really-really-wants-to-get-to-know-you/" target="_blank" rel="noopener">New Computer</a>, <a href="https://net.inc" target="_blank" rel="noopener">Net</a>, <a href="https://cosmos.so" target="_blank" rel="noopener">Cosmos</a>, <a href="https://messenger.com" target="_blank" rel="noopener">Messenger</a>, <a href="https://heartmountain.org" target="_blank" rel="noopener">Heart Mountain</a>, <a href="https://nytimes.com" target="_blank" rel="noopener">The New York Times</a>, and many others.</span>
           <span class="tag">Once, I even designed the logo for a one-hole golf course.</span>
           <span class="tag">Each year I teach at the <a href="https://ciid.dk" target="_blank" rel="noopener">Copenhagen Institute of Interaction Design</a>.</span>
           <span class="tag">I hold a BFA in Graphic Design from <a href="https://risd.gd" target="_blank" rel="noopener">RISD</a>.</span>
-        </div>
-        <div class="content-right">
           <div class="social-icons">
-            <a href="https://twitter.com/juliankelly" target="_blank" rel="noopener" aria-label="Twitter"><svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
-            <a href="https://bsky.app/" target="_blank" rel="noopener" aria-label="Bluesky"><svg viewBox="0 0 24 24"><path d="M12 10.8c-1.087-2.114-4.046-6.053-6.798-7.995C2.566.944 1.561 1.266.902 1.565.139 1.908 0 3.08 0 3.768c0 .69.378 5.65.624 6.479.785 2.627 3.601 3.476 6.178 3.126-4.52.646-8.012 2.78-4.333 8.627C5.608 26.515 10.5 20.2 12 17.376c1.5 2.824 6.063 8.676 9.531 4.624 3.68-5.848.188-7.98-4.333-8.627 2.577.35 5.393-.499 6.178-3.126C23.622 9.418 24 4.458 24 3.768c0-.688-.139-1.86-.902-2.203-.659-.3-1.664-.62-4.3 1.24C16.046 4.748 13.087 8.687 12 10.8"/></svg></a>
+            <span class="tag">
+              <a href="mailto:julian@jfk.works" aria-label="Email"><svg viewBox="0 0 20 20"><path d="M1.782 5.793C2.166 4.376 3.461 3.334 5 3.334h10c1.538 0 2.834 1.042 3.217 2.459l-7.472 3.736a1.667 1.667 0 0 1-1.49 0L1.782 5.793Z"/><path d="M1.667 7.599v5.734c0 1.841 1.492 3.334 3.333 3.334h10c1.841 0 3.334-1.493 3.334-3.334V7.599l-6.843 3.42a3.333 3.333 0 0 1-2.981 0L1.667 7.599Z"/></svg> julian@jfk.works</a>
+            </span>
+            <span class="tag">
+              <a href="https://twitter.com/julianfkelly" target="_blank" rel="noopener" aria-label="Twitter"><svg viewBox="0 0 20 20"><path d="M19.375 4.276a7.508 7.508 0 0 1-2.209.596 3.832 3.832 0 0 0 1.691-2.096 7.652 7.652 0 0 1-2.443.917A3.842 3.842 0 0 0 13.607 2.5c-2.124 0-3.846 1.696-3.846 3.788 0 .296.034.584.099.862a10.94 10.94 0 0 1-7.93-3.957 3.756 3.756 0 0 0-.52 1.904c0 1.313.68 2.473 1.711 3.152a3.85 3.85 0 0 1-1.742-.474v.049c0 1.835 1.326 3.366 3.086 3.714a3.872 3.872 0 0 1-1.013.139 3.84 3.84 0 0 1-.724-.066c.49 1.503 1.91 2.599 3.594 2.629a7.72 7.72 0 0 1-4.778 1.621c-.31 0-.617-.018-.918-.053A10.904 10.904 0 0 0 6.52 17.5c7.077 0 10.946-5.77 10.946-10.773 0-.163-.004-.327-.011-.49a7.763 7.763 0 0 0 1.918-1.963l.002-.002Z"/></svg> @julianfkelly</a>
+            </span>
           </div>
-          <span class="tag" id="last-updated"></span>
         </div>
       </div>
     </div>
@@ -303,6 +355,7 @@
   const LCH_LIGHT = { lightness: 0.71, chroma: 0.79, hue: 42/360 };
   const systemLight = window.matchMedia('(prefers-color-scheme: light)').matches;
   const params = { arcMin: 0, arcMax: 0, decay: 0, speed: 0.3, density: 0.30, spread: 0.52, rings: 7/9, ...(systemLight ? LCH_LIGHT : LCH_DARK), light: systemLight };
+  if (systemLight) document.documentElement.setAttribute('data-theme', 'light');
   const sliderUpdaters = {}; // keyed by param name, set during slider setup
 
   // --- Animation state ---
@@ -406,7 +459,7 @@
           const bN = finalB / 100;
           const L = p.lightness;
           const C = p.chroma * 0.37;
-          const H = p.hue * 360 + dotRand[di] * 40 + finalB * 0.25 - 32.5;
+          const H = p.hue * 360 + dotRand[di] * 55 + finalB * 0.25 - 40;
           ctx.fillStyle = `oklch(${L.toFixed(2)} ${C.toFixed(3)} ${H.toFixed(1)} / ${bN.toFixed(2)})`;
           ctx.beginPath();
           ctx.arc(dotX, dotY, dotHalfR, 0, TWO_PI);
@@ -574,10 +627,11 @@
   const bgBtn = document.createElement('button');
   bgBtn.className = 'bg-toggle';
   bgBtn.textContent = params.light ? 'Light' : 'Dark';
-  bgBtn.addEventListener('click', () => {
-    params.light = !params.light;
-    bgBtn.textContent = params.light ? 'Light' : 'Dark';
+  function applyTheme() {
     const root = document.documentElement;
+    if (params.light) root.setAttribute('data-theme', 'light');
+    else root.removeAttribute('data-theme');
+    bgBtn.textContent = params.light ? 'Light' : 'Dark';
     root.style.setProperty('--bg', params.light ? '#fff' : '#000');
     root.style.setProperty('--fg', params.light ? 'oklch(0 0 0)' : 'oklch(0.948 0.004 106.475)');
     root.style.setProperty('--container-bg', params.light ? 'oklch(0.948 0.004 106.475)' : 'oklch(0.193 0.005 67.517)');
@@ -589,9 +643,13 @@
       if (sliderUpdaters[k]) sliderUpdaters[k](params[k]);
     }
     updateAccent();
-  });
+  }
+  bgBtn.addEventListener('click', () => { params.light = !params.light; applyTheme(); });
   bgRow.append(bgLabel, bgBtn);
   panel.appendChild(bgRow);
+
+  // --- Theme toggle button (sun/moon) ---
+  document.getElementById('theme-toggle').addEventListener('click', () => { params.light = !params.light; applyTheme(); });
 
   // --- Set --accent from initial params ---
   updateAccent();
