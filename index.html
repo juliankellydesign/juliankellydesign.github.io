@@ -55,6 +55,7 @@
     canvas {
       display: block; width: 100%; height: 100%;
       touch-action: none; user-select: none;
+      pointer-events: none;
       z-index: 500;
     }
 
@@ -62,7 +63,7 @@
 
     .content-overlay {
       position: absolute; inset: 16px;
-      pointer-events: none;
+      pointer-events: auto;
       display: flex; flex-direction: column; justify-content: space-between;
       z-index: -10;
     }
@@ -92,6 +93,16 @@
     .tag.accent {
       background: var(--accent); color: #fff;
       transition: background 0.4s;
+    }
+
+    .tag a {
+      color: inherit;
+      text-decoration: none;
+      border-bottom: 2px dotted color-mix(in oklch, var(--fg), transparent 50%);
+    }
+
+    .tag a:hover {
+      border-bottom: 2px dotted color-mix(in oklch, var(--fg), transparent 0%);
     }
 
     .social-icons { display: flex; gap: 12px; }
@@ -201,17 +212,17 @@
     <div class="content-overlay">
       <div class="content-top">
         <span class="tag accent">Julian Francis Kelly</span>
-        <span class="tag">Interaction Design</span>
+        <span class="tag">Interaction Designer</span>
       </div>
       <div class="content-bottom">
         <div class="content-left">
-          <span class="tag">Hello!</span>
-          <span class="tag">I work across motion, visual, and interaction design, each informing the others.</span>
-          <span class="tag">Currently, I'm doing all that at Shopify.</span>
-          <span class="tag">I've designed for Conductor, New Computer, Net, Cosmos, Messenger,<br>Heart Mountain, The New York Times, and many others.</span>
-          <span class="tag">I even designed a logo for a one-hole golf course.</span>
-          <span class="tag">Each year I teach at the Copenhagen Institute of Interaction Design.</span>
-          <span class="tag">I hold a BFA in Graphic Design from RISD.</span>
+          <span class="tag">Welcome!</span>
+          <span class="tag">I work across motion, visual, and interaction design.</span>
+          <span class="tag">Right now, I'm that at <a href="https://shop.app" target="_blank" rel="noopener">Shopify</a>.</span>
+          <span class="tag">I've designed for <a href="https://conductor.build" target="_blank" rel="noopener">Conductor</a>, <a href="https://techcrunch.com/2024/06/21/dots-ai-really-really-wants-to-get-to-know-you/" target="_blank" rel="noopener">New Computer</a>, <a href="https://net.inc" target="_blank" rel="noopener">Net</a>, <a href="https://cosmos.so" target="_blank" rel="noopener">Cosmos</a>, <a href="https://messenger.com" target="_blank" rel="noopener">Messenger</a>, <a href="https://heartmountain.org" target="_blank" rel="noopener">Heart Mountain</a>, <a href="https://nytimes.com" target="_blank" rel="noopener">The New York Times</a>, and many others.</span>
+          <span class="tag">Once, I even designed the logo for a one-hole golf course.</span>
+          <span class="tag">Each year I teach at the <a href="https://ciid.dk" target="_blank" rel="noopener">Copenhagen Institute of Interaction Design</a>.</span>
+          <span class="tag">I hold a BFA in Graphic Design from <a href="https://risd.gd" target="_blank" rel="noopener">RISD</a>.</span>
         </div>
         <div class="content-right">
           <div class="social-icons">
@@ -288,8 +299,8 @@
 
   // --- Parameters (controlled by sliders) ---
   // rings: 0..1 maps to 1..MAX_RINGS (default → 4)
-  const LCH_DARK  = { lightness: 0.71, chroma: 0.79, hue: 45/360 };
-  const LCH_LIGHT = { lightness: 0.71, chroma: 0.79, hue: 45/360 };
+  const LCH_DARK  = { lightness: 0.71, chroma: 0.79, hue: 42/360 };
+  const LCH_LIGHT = { lightness: 0.71, chroma: 0.79, hue: 42/360 };
   const systemLight = window.matchMedia('(prefers-color-scheme: light)').matches;
   const params = { arcMin: 0, arcMax: 0, decay: 0, speed: 0.3, density: 0.30, spread: 0.52, rings: 7/9, ...(systemLight ? LCH_LIGHT : LCH_DARK), light: systemLight };
   const sliderUpdaters = {}; // keyed by param name, set during slider setup
@@ -568,7 +579,7 @@
     bgBtn.textContent = params.light ? 'Light' : 'Dark';
     const root = document.documentElement;
     root.style.setProperty('--bg', params.light ? '#fff' : '#000');
-    root.style.setProperty('--fg', params.light ? 'oklch(0 0 0)' : 'oklch(1 0 0)');
+    root.style.setProperty('--fg', params.light ? 'oklch(0 0 0)' : 'oklch(0.948 0.004 106.475)');
     root.style.setProperty('--container-bg', params.light ? 'oklch(0.948 0.004 106.475)' : 'oklch(0.193 0.005 67.517)');
     root.style.setProperty('--tag-bg', params.light ? '#fff' : 'oklch(0.241 0.008 4.059)');
     document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.content = params.light ? '#f7f6f2' : '#302a25');
