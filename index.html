@@ -26,6 +26,11 @@
     }
     @font-face {
       font-family: 'Karl';
+      src: url('karl-regular.otf');
+      font-weight: 400;
+    }
+    @font-face {
+      font-family: 'Karl';
       src: url('karl-medium.otf');
       font-weight: 500;
     }
@@ -98,6 +103,7 @@
       width: fit-content; font-family: inherit;
       transition: background 0.4s, color 0.4s;
       background: var(--tag-bg); color: var(--fg);
+      font-weight: 500;
     }
 
     .tag.accent {
@@ -136,6 +142,7 @@
 
     .social-icons span {
       background: color-mix(in oklch, var(--tag-bg), transparent 50%);
+      font-weight: 400;
     }
 
     .social-icons span svg {
@@ -153,9 +160,14 @@
       border-bottom: none;
     }
 
+    .stream-hide { display: none !important; }
+    .fade { opacity: 0; transition: opacity 0.4s; }
+
     #last-updated {
       font-size: 15px; line-height: 20px;
-      color: var(--fg); font-family: inherit;
+      font-weight: 400;
+      color: color-mix(in oklch, var(--fg), transparent 50%); font-family: inherit;
+      background: color-mix(in oklch, var(--tag-bg), transparent 50%);
       user-select: none; transition: color 0.4s;
     }
 
@@ -258,8 +270,8 @@
           <span class="tag">Interaction Designer</span>
         </div>
         <div class="content-top-right">
-          <span class="tag" id="last-updated"></span>
-          <button id="theme-toggle" aria-label="Toggle theme">
+          <span class="tag fade" id="last-updated"></span>
+          <button class="fade" id="theme-toggle" aria-label="Toggle theme">
             <svg class="icon-sun" viewBox="0 0 20 20"><path d="M10.833 1.667a.833.833 0 1 0-1.666 0v.833a.833.833 0 0 0 1.666 0v-.833ZM10.833 17.5a.833.833 0 1 0-1.666 0v.833a.833.833 0 0 0 1.666 0V17.5ZM16.48 3.52a.833.833 0 0 0-1.178 0l-.59.59a.833.833 0 0 0 1.178 1.179l.59-.59a.833.833 0 0 0 0-1.179ZM5.29 15.89a.833.833 0 0 0-1.179-1.179l-.59.59a.833.833 0 0 0 1.179 1.179l.59-.59ZM16.666 10a.833.833 0 0 1 .834-.833h.833a.833.833 0 0 1 0 1.666H17.5A.833.833 0 0 1 16.666 10ZM1.666 9.167a.833.833 0 1 0 0 1.666h.834a.833.833 0 0 0 0-1.666h-.834ZM14.71 14.71a.833.833 0 0 1 1.179 0l.59.59a.833.833 0 0 1-1.179 1.179l-.59-.59a.833.833 0 0 1 0-1.179ZM4.697 3.52a.833.833 0 0 0-1.178 1.178l.59.59a.833.833 0 0 0 1.179-1.178l-.59-.59ZM6.464 6.465a5 5 0 1 1 7.071 7.07 5 5 0 0 1-7.07-7.07Z"/></svg>
             <svg class="icon-moon" viewBox="0 0 20 20"><path d="M10.043 3a.833.833 0 0 0-.756-1.304C5.018 2.058 1.667 5.636 1.667 10c0 4.602 3.73 8.33 8.332 8.33 4.362 0 7.94-3.352 8.301-7.62a.833.833 0 0 0-1.303-.757A5.833 5.833 0 0 1 10.043 3Z"/></svg>
           </button>
@@ -271,14 +283,13 @@
           <span class="tag">I work across motion, visual, and interaction design.</span>
           <span class="tag">Currently, I'm at <a href="https://shop.app" target="_blank" rel="noopener">Shopify</a>.</span>
           <span class="tag">I've designed for <a href="https://conductor.build" target="_blank" rel="noopener">Conductor</a>, <a href="https://techcrunch.com/2024/06/21/dots-ai-really-really-wants-to-get-to-know-you/" target="_blank" rel="noopener">New Computer</a>, <a href="https://net.inc" target="_blank" rel="noopener">Net</a>, <a href="https://cosmos.so" target="_blank" rel="noopener">Cosmos</a>, <a href="https://messenger.com" target="_blank" rel="noopener">Messenger</a>, <a href="https://heartmountain.org" target="_blank" rel="noopener">Heart Mountain</a>, <a href="https://nytimes.com" target="_blank" rel="noopener">The New York Times</a>, and many others.</span>
-          <span class="tag">Once, I even designed the logo for a one-hole golf course.</span>
           <span class="tag">Each year I teach at the <a href="https://ciid.dk" target="_blank" rel="noopener">Copenhagen Institute of Interaction Design</a>.</span>
           <span class="tag">I hold a BFA in Graphic Design from <a href="https://risd.gd" target="_blank" rel="noopener">RISD</a>.</span>
           <div class="social-icons">
-            <span class="tag">
+            <span class="tag fade">
               <a href="mailto:julian@jfk.works" aria-label="Email"><svg viewBox="0 0 20 20"><path d="M1.782 5.793C2.166 4.376 3.461 3.334 5 3.334h10c1.538 0 2.834 1.042 3.217 2.459l-7.472 3.736a1.667 1.667 0 0 1-1.49 0L1.782 5.793Z"/><path d="M1.667 7.599v5.734c0 1.841 1.492 3.334 3.333 3.334h10c1.841 0 3.334-1.493 3.334-3.334V7.599l-6.843 3.42a3.333 3.333 0 0 1-2.981 0L1.667 7.599Z"/></svg> julian@jfk.works</a>
             </span>
-            <span class="tag">
+            <span class="tag fade">
               <a href="https://twitter.com/julianfkelly" target="_blank" rel="noopener" aria-label="Twitter"><svg viewBox="0 0 20 20"><path d="M19.375 4.276a7.508 7.508 0 0 1-2.209.596 3.832 3.832 0 0 0 1.691-2.096 7.652 7.652 0 0 1-2.443.917A3.842 3.842 0 0 0 13.607 2.5c-2.124 0-3.846 1.696-3.846 3.788 0 .296.034.584.099.862a10.94 10.94 0 0 1-7.93-3.957 3.756 3.756 0 0 0-.52 1.904c0 1.313.68 2.473 1.711 3.152a3.85 3.85 0 0 1-1.742-.474v.049c0 1.835 1.326 3.366 3.086 3.714a3.872 3.872 0 0 1-1.013.139 3.84 3.84 0 0 1-.724-.066c.49 1.503 1.91 2.599 3.594 2.629a7.72 7.72 0 0 1-4.778 1.621c-.31 0-.617-.018-.918-.053A10.904 10.904 0 0 0 6.52 17.5c7.077 0 10.946-5.77 10.946-10.773 0-.163-.004-.327-.011-.49a7.763 7.763 0 0 0 1.918-1.963l.002-.002Z"/></svg> @julianfkelly</a>
             </span>
           </div>
@@ -294,6 +305,12 @@
   </div>
 
   <script>
+  // --- Hide content for streaming effect (must run before first paint) ---
+  document.querySelectorAll('.content-top-left .tag:not(.fade), .content-left > .tag:not(.fade)')
+    .forEach(function(el) { el.classList.add('stream-hide'); });
+  (function(t) { t.style.opacity = '0'; t.style.pointerEvents = 'none'; })(document.getElementById('theme-toggle'));
+  setTimeout(function() { document.querySelectorAll('.fade').forEach(function(el) { el.style.opacity = '1'; }); }, 400);
+
   // ==========================================================================
   //  TAXONOMY
   //
@@ -699,6 +716,105 @@
       document.getElementById('last-updated').textContent = 'Last updated ' + yyyy + '.' + mm + '.' + dd;
     })
     .catch(() => {});
+
+  // --- LLM-style streaming text effect ---
+  (function () {
+    // Approximate syllable splitting for token simulation
+    function syllabify(word) {
+      // Keep contractions whole (I'm, I've, don't, etc.)
+      if (word.includes("'")) return [word];
+      // Split email-like strings on @ and .
+      if (/[@.]/.test(word)) {
+        return word.split(/([@.])/).filter(Boolean).flatMap(part =>
+          part.match(/[^aeiouy]*[aeiouy]+[^aeiouy]*/gi) || [part]
+        );
+      }
+      return word.match(/[^aeiouy]*[aeiouy]+[^aeiouy]*/gi) || [word];
+    }
+
+    function tokenize(text) {
+      if (!text) return [];
+      const parts = text.split(/( +)/);
+      const tokens = [];
+      for (const p of parts) {
+        if (!p) continue;
+        if (/^ +$/.test(p)) tokens.push(p);
+        else tokens.push(...syllabify(p));
+      }
+      return tokens;
+    }
+
+    function getTextNodes(el) {
+      const nodes = [];
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        if (walker.currentNode.textContent.trim()) nodes.push(walker.currentNode);
+      }
+      return nodes;
+    }
+
+    // Collect tags in stream order: top-left, then bottom bio (excluding .fade)
+    const topTags = [...document.querySelectorAll('.content-top-left .tag:not(.fade)')];
+    const bottomTags = [...document.querySelectorAll('.content-left > .tag:not(.fade)')];
+    const themeToggle = document.getElementById('theme-toggle');
+    const allTags = [...topTags, ...bottomTags];
+
+    // Build a flat queue of tokens across all tags
+    const queue = [];
+    for (const tag of allTags) {
+      const textNodes = getTextNodes(tag);
+      const nodeData = textNodes.map(n => ({
+        node: n, tokens: tokenize(n.textContent)
+      }));
+      // Clear all text content
+      nodeData.forEach(nd => { nd.node.textContent = ''; });
+
+      let isFirst = true;
+      for (const nd of nodeData) {
+        for (const token of nd.tokens) {
+          queue.push({ tag, node: nd.node, token, isFirstInTag: isFirst });
+          isFirst = false;
+        }
+      }
+    }
+
+    // Stream tokens with LLM-like timing
+    let qi = 0;
+    const BASE_DELAY = 35;
+    const TAG_PAUSE = 120;
+
+    function showThemeToggle() {
+      themeToggle.style.transition = 'opacity 0.4s';
+      themeToggle.style.opacity = '1';
+      themeToggle.style.pointerEvents = '';
+    }
+
+    // Fallback: ensure theme toggle is accessible even if streaming is slow
+    setTimeout(showThemeToggle, 8000);
+
+    function next() {
+      if (qi >= queue.length) {
+        showThemeToggle();
+        return;
+      }
+
+      const entry = queue[qi];
+
+      // Show tag when its first token arrives
+      if (entry.isFirstInTag) {
+        entry.tag.classList.remove('stream-hide');
+      }
+
+      entry.node.textContent += entry.token;
+      qi++;
+
+      // Add extra delay between tags for a natural "thinking" pause
+      const isNewTag = qi < queue.length && queue[qi].isFirstInTag;
+      setTimeout(next, BASE_DELAY + Math.random() * 25 + (isNewTag ? TAG_PAUSE : 0));
+    }
+
+    setTimeout(next, 400);
+  })();
   </script>
 </body>
 </html>
