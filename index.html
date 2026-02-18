@@ -128,10 +128,10 @@
 
   // --- Parameters (controlled by sliders) ---
   // rings: 0..1 maps to 1..MAX_RINGS (default → 4)
-  const LCH_DARK  = { lightness: 0.38, chroma: 0.83, hue: 78/360 };
-  const LCH_LIGHT = { lightness: 0.38, chroma: 0.83, hue: 78/360 };
+  const LCH_DARK  = { lightness: 0.19, chroma: 0.85, hue: 43/360 };
+  const LCH_LIGHT = { lightness: 0.19, chroma: 0.85, hue: 43/360 };
   const systemLight = window.matchMedia('(prefers-color-scheme: light)').matches;
-  const params = { arcMin: 0, arcMax: 0, decay: 0, speed: 0.3, density: 0.5, spread: 0.52, rings: 7/9, ...(systemLight ? LCH_LIGHT : LCH_DARK), light: systemLight };
+  const params = { arcMin: 0, arcMax: 0, decay: 0.09, speed: 0.3, density: 0.48, spread: 0.52, rings: 7/9, ...(systemLight ? LCH_LIGHT : LCH_DARK), light: systemLight };
   const sliderUpdaters = {}; // keyed by param name, set during slider setup
 
   // --- Animation state ---
@@ -235,8 +235,7 @@
         // --- Draw the dot (oklch with alpha) ---
         if (finalB > 0.5) {
           const bN = finalB / 100;
-          const bgL = p.light ? 0.970 : 0.194;
-          const L = p.light ? bgL - p.lightness : bgL + p.lightness;
+          const L = p.lightness;
           const C = p.chroma * 0.37;
           const H = p.hue * 360 + dotRand[di] * 40 + finalB * 0.25 - 32.5;
           ctx.fillStyle = `oklch(${L.toFixed(2)} ${C.toFixed(3)} ${H.toFixed(1)} / ${bN.toFixed(2)})`;
