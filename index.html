@@ -45,7 +45,6 @@
       font-weight: 900;
     }
 
-
     ::selection { background: var(--accent); color: #fff; }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -351,7 +350,6 @@
 
   // -- Ring layout: stars are arranged in concentric rings around the center --
   const MAX_RINGS = 10;            // maximum rings the slider can reach
-  const DEFAULT_RINGS = 4;         // default ring count on load
   const STAR_SPACING = 100;        // px gap between stars along a ring
 
   // How many stars sit in each ring (grows with circumference)
@@ -382,7 +380,6 @@
   function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
   function mapVal(v, a1, b1, a2, b2) { return a2 + (b2 - a2) * ((v - a1) / (b1 - a1)); }
   function normVal(v, a, b) { return (v - a) / (b - a); }
-  function lerp(a, b, t) { return a + (b - a) * t; }
 
   // --- Parameters (controlled by sliders) ---
   // rings: 0..1 maps to 1..MAX_RINGS (default → 4)
@@ -503,7 +500,6 @@
         di++;
       }
     }
-
   }
 
   // --- Main animation loop ---
