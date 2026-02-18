@@ -480,7 +480,7 @@
 
     const dpr = window.devicePixelRatio || 1;
     const w = canvas.width / dpr, h = canvas.height / dpr;
-    const scale = Math.min(w, h) / 900;
+    const scale = Math.min(w, h) / 900 * (w < 600 ? 1.75 : 1);
     ctx.clearRect(0, 0, w, h);
 
     const cycleSec = ANIM_FRAMES / 60; // seconds per animation cycle at base speed
