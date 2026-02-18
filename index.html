@@ -115,6 +115,7 @@
       transition: background 0.4s, color 0.4s;
       background: var(--tag-bg); color: var(--fg);
       font-weight: 500;
+      box-shadow: 0 0 8px color-mix(in oklch, var(--tag-bg), transparent 50%);
     }
 
     .tag.accent {
@@ -180,7 +181,7 @@
     }
 
     .stream-hide { display: none !important; }
-    .fade { opacity: 0; transition: opacity 3s; }
+    .fade { opacity: 0; transition: opacity 0.4s; }
 
     #last-updated {
       font-size: 15px; line-height: 20px;
@@ -207,7 +208,7 @@
       backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
       border: 1px solid color-mix(in oklch, var(--fg), transparent 94%);
       min-height: 44px; min-width: 44px;
-      transition: opacity 0.15s, background 0.4s, color 0.4s, border-color 0.4s;
+      transition: opacity 0.4s, background 0.4s, color 0.4s, border-color 0.4s;
     }
     #toggle-btn:hover { opacity: 0.8; }
 
