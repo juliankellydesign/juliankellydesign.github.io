@@ -593,6 +593,9 @@
   bgRow.append(bgLabel, bgBtn);
   panel.appendChild(bgRow);
 
+  // --- Set --accent from initial params ---
+  updateAccent();
+
   // --- Intro animation: ease arcMin & arcMax from 0 to target ---
   (function () {
     const targets = { arcMin: 0.10, arcMax: 0.95 };
