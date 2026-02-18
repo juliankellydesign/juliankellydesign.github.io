@@ -39,6 +39,11 @@
       src: url('karl-bold.otf');
       font-weight: 700;
     }
+    @font-face {
+      font-family: 'Karl';
+      src: url('karl-ultrablack.otf');
+      font-weight: 900;
+    }
 
 
     ::selection { background: var(--accent); color: #fff; }
@@ -57,6 +62,11 @@
       border-radius: 16px; overflow: hidden;
       background: var(--container-bg);
       transition: background 0.4s;
+    }
+    @media (max-width: 600px) {
+      #canvas-wrap {
+        inset: 12px;
+      }
     }
 
     canvas {
@@ -77,12 +87,12 @@
 
     .content-top {
       display: flex;
-      gap: 12px;
+      gap: 8px;
       flex-wrap: wrap;
       justify-content: space-between;
     }
-    .content-top-left { display: flex; gap: 12px; flex-wrap: wrap; }
-    .content-top-right { display: flex; gap: 12px; align-items: flex-start; }
+    .content-top-left { display: flex; gap: 8px; flex-wrap: wrap; }
+    .content-top-right { display: flex; gap: 8px; align-items: flex-start; }
     @media (max-width: 600px) {
       .content-top {
         flex-direction: column;
@@ -94,7 +104,7 @@
       display: flex; align-items: flex-end;
     }
 
-    .content-left { display: flex; flex-direction: column; gap: 12px; }
+    .content-left { display: flex; flex-direction: column; gap: 8px; }
 
     .tag {
       padding: 8px 12px;
@@ -109,6 +119,8 @@
     .tag.accent {
       background: var(--accent); color: #fff;
       transition: background 0.4s;
+      font-weight: 900;
+      letter-spacing: 0.06em;
     }
 
     .tag a {
@@ -123,10 +135,16 @@
 
     #theme-toggle {
       display: flex; align-items: center; justify-content: center;
-      background: var(--tag-bg); border: none; border-radius: 4px;
+      background: color-mix(in oklch, var(--tag-bg), transparent 50%); border: none; border-radius: 4px;
       padding: 8px; cursor: pointer;
       color: var(--fg); transition: background 0.4s, color 0.4s;
     }
+    @media (max-width: 600px) {
+      #theme-toggle {
+        position: absolute; right: 0; top: 0;
+      }
+    }
+    #theme-toggle:hover { background: color-mix(in oklch, var(--tag-bg), transparent 0%); }
     #theme-toggle svg { width: 20px; height: 20px; fill: currentColor; }
     #theme-toggle .icon-sun { display: none; }
     #theme-toggle .icon-moon { display: block; }
@@ -161,14 +179,15 @@
     }
 
     .stream-hide { display: none !important; }
-    .fade { opacity: 0; transition: opacity 0.4s; }
+    .fade { opacity: 0; transition: opacity 3s; }
 
     #last-updated {
       font-size: 15px; line-height: 20px;
       font-weight: 400;
       color: color-mix(in oklch, var(--fg), transparent 50%); font-family: inherit;
-      background: color-mix(in oklch, var(--tag-bg), transparent 50%);
+      background: transparent;
       user-select: none; transition: color 0.4s;
+      border: 1px solid color-mix(in oklch, var(--fg), transparent 75%);
     }
 
     /* Controls panel */
@@ -190,7 +209,6 @@
       border: 1px solid color-mix(in oklch, var(--fg), transparent 94%);
       min-height: 44px; min-width: 44px;
       transition: opacity 0.15s, background 0.4s, color 0.4s, border-color 0.4s;
-      display: none;
     }
     #toggle-btn:hover { opacity: 0.8; }
 
@@ -308,8 +326,8 @@
   // --- Hide content for streaming effect (must run before first paint) ---
   document.querySelectorAll('.content-top-left .tag:not(.fade), .content-left > .tag:not(.fade)')
     .forEach(function(el) { el.classList.add('stream-hide'); });
-  (function(t) { t.style.opacity = '0'; t.style.pointerEvents = 'none'; })(document.getElementById('theme-toggle'));
-  setTimeout(function() { document.querySelectorAll('.fade').forEach(function(el) { el.style.opacity = '1'; }); }, 400);
+  setTimeout(function() { document.querySelectorAll('.social-icons .fade').forEach(function(el) { el.style.opacity = '1'; }); }, 400);
+  function revealAfterStream() { document.getElementById('last-updated').style.opacity = '1'; document.getElementById('theme-toggle').style.opacity = '1'; }
 
   // ==========================================================================
   //  TAXONOMY
@@ -368,8 +386,8 @@
 
   // --- Parameters (controlled by sliders) ---
   // rings: 0..1 maps to 1..MAX_RINGS (default → 4)
-  const LCH_DARK  = { lightness: 0.71, chroma: 0.79, hue: 42/360 };
-  const LCH_LIGHT = { lightness: 0.71, chroma: 0.79, hue: 42/360 };
+  const LCH_DARK  = { lightness: 0.72, chroma: 0.78, hue: 24/360 };
+  const LCH_LIGHT = { lightness: 0.80, chroma: 0.79, hue: 42/360 };
   const systemLight = window.matchMedia('(prefers-color-scheme: light)').matches;
   const params = { arcMin: 0, arcMax: 0, decay: 0, speed: 0.3, density: 0.30, spread: 0.52, rings: 7/9, ...(systemLight ? LCH_LIGHT : LCH_DARK), light: systemLight };
   if (systemLight) document.documentElement.setAttribute('data-theme', 'light');
@@ -672,9 +690,9 @@
   updateAccent();
 
   // --- Intro animation: ease arcMin & arcMax from 0 to target ---
-  (function () {
+  function startIntroBloom() {
     const targets = { arcMin: 0.10, arcMax: 0.95 };
-    const duration = 2000; // ms
+    const duration = 5000; // ms
     const start = performance.now();
     function ease(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; } // easeInOutQuad
     function tick(now) {
@@ -688,7 +706,7 @@
       else oscillateArcMin();
     }
     requestAnimationFrame(tick);
-  })();
+  }
 
   // --- Oscillate arcMin between 10 and 80 over 5s ---
   function oscillateArcMin() {
@@ -713,7 +731,7 @@
       const yyyy = d.getFullYear();
       const mm = String(d.getMonth() + 1).padStart(2, '0');
       const dd = String(d.getDate()).padStart(2, '0');
-      document.getElementById('last-updated').textContent = 'Last updated ' + yyyy + '.' + mm + '.' + dd;
+      document.getElementById('last-updated').textContent = 'Updated ' + yyyy + '.' + mm + '.' + dd;
     })
     .catch(() => {});
 
@@ -756,7 +774,6 @@
     // Collect tags in stream order: top-left, then bottom bio (excluding .fade)
     const topTags = [...document.querySelectorAll('.content-top-left .tag:not(.fade)')];
     const bottomTags = [...document.querySelectorAll('.content-left > .tag:not(.fade)')];
-    const themeToggle = document.getElementById('theme-toggle');
     const allTags = [...topTags, ...bottomTags];
 
     // Build a flat queue of tokens across all tags
@@ -783,20 +800,8 @@
     const BASE_DELAY = 35;
     const TAG_PAUSE = 120;
 
-    function showThemeToggle() {
-      themeToggle.style.transition = 'opacity 0.4s';
-      themeToggle.style.opacity = '1';
-      themeToggle.style.pointerEvents = '';
-    }
-
-    // Fallback: ensure theme toggle is accessible even if streaming is slow
-    setTimeout(showThemeToggle, 8000);
-
     function next() {
-      if (qi >= queue.length) {
-        showThemeToggle();
-        return;
-      }
+      if (qi >= queue.length) { revealAfterStream(); startIntroBloom(); return; }
 
       const entry = queue[qi];
 
