@@ -46,9 +46,9 @@
                 --tag-bg: oklch(0.241 0.008 4.059);
                 --tag-bg-muted: color-mix(in oklch, var(--tag-bg), transparent 80%);
                 --border: color-mix(in oklch, var(--fg), transparent 75%);
-                --border-accent: color-mix(in oklch, var(--accent), var(--container-bg) 70%);
+                --border-accent: oklch(from var(--accent) calc(l * 0.5) calc(c * 0.3) h);
                 --muted: color-mix(in oklch, var(--fg), transparent 40%);
-                --muted-accent: color-mix(in oklch, var(--accent), var(--container-bg) 50%);
+                --muted-accent: oklch(from var(--accent) calc(l * 0.7) calc(c * 0.6) h);
                 --border-shadow: rgb(255, 255, 255, 0.12);
             }
             @media (prefers-color-scheme: light) {
@@ -60,9 +60,9 @@
                     --tag-bg: #fff;
                     --tag-bg-muted: color-mix(in oklch, var(--tag-bg), transparent 80%);
                     --border: color-mix(in oklch, var(--fg), transparent 75%);
-                    --border-accent: color-mix(in oklch, var(--accent), var(--container-bg) 70%);
+                    --border-accent: oklch(from var(--accent) calc(l * 0.5) calc(c * 0.3) h);
                     --muted: color-mix(in oklch, var(--fg), transparent 40%);
-                    --muted-accent: color-mix(in oklch, var(--accent), var(--container-bg) 50%);
+                    --muted-accent: oklch(from var(--accent) calc(l * 0.9) calc(c * 0.6) h);
                     --border-shadow: rgba(0,0,0,0.64);
                 }
             }
@@ -1244,6 +1244,10 @@
                 root.style.setProperty(
                     "--tag-bg",
                     params.light ? "#fff" : "oklch(0.241 0.008 4.059)",
+                );
+                root.style.setProperty(
+                    "--border-shadow",
+                    params.light ? "rgba(0,0,0,0.64)" : "rgb(255, 255, 255, 0.12)",
                 );
                 document
                     .querySelectorAll('meta[name="theme-color"]')
