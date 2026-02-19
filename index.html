@@ -1,822 +1,1330 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <meta name="theme-color" content="#302a25" media="(prefers-color-scheme: dark)">
-  <meta name="theme-color" content="#f7f6f2" media="(prefers-color-scheme: light)">
-  <title>Julian Francis Kelly</title>
-  <meta name="description" content="Generative asterism animation - clusters of glowing dots pulsing in concentric rings">
-  <link rel="icon" type="image/png" href="favicon.png">
-  <meta property="og:image" content="og image.png">
-  <style>
-    :root {
-      --bg: #000;
-      --fg: oklch(0.948 0.004 106.475);
-      --accent: oklch(0.7 0.337 28);
-      --container-bg: oklch(0.193 0.005 67.517);
-      --tag-bg: oklch(0.3 0.008 4.059);
-    }
-    @media (prefers-color-scheme: light) {
-      :root {
-        --bg: #fff;
-        --fg: oklch(0 0 0);
-        --accent: oklch(0.7 0.307 78);
-        --container-bg: oklch(0.948 0.004 106.475);
-        --tag-bg: #fff;
-      }
-    }
-    @font-face {
-      font-family: 'Karl';
-      src: url('karl-regular.otf');
-      font-weight: 400;
-    }
-    @font-face {
-      font-family: 'Karl';
-      src: url('karl-medium.otf');
-      font-weight: 500;
-    }
-    @font-face {
-      font-family: 'Karl';
-      src: url('karl-bold.otf');
-      font-weight: 700;
-    }
-    @font-face {
-      font-family: 'Karl';
-      src: url('karl-ultrablack.otf');
-      font-weight: 900;
-    }
+    <head>
+        <meta charset="UTF-8" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
+        />
+        <meta
+            http-equiv="Cache-Control"
+            content="no-cache, no-store, must-revalidate"
+        />
+        <meta http-equiv="Pragma" content="no-cache" />
+        <meta http-equiv="Expires" content="0" />
+        <meta
+            name="theme-color"
+            content="#302a25"
+            media="(prefers-color-scheme: dark)"
+        />
+        <meta
+            name="theme-color"
+            content="#f7f6f2"
+            media="(prefers-color-scheme: light)"
+        />
+        <title>Julian Francis Kelly</title>
+        <meta
+            name="description"
+            content="Generative asterism animation - clusters of glowing dots pulsing in concentric rings"
+        />
+        <link rel="icon" type="image/png" href="favicon.png" />
+        <meta property="og:image" content="og image.png" />
+        <style>
+            :root {
+                --bg: #000;
+                --fg: oklch(0.948 0.004 106.475);
+                --accent: oklch(0.7 0.337 28);
+                --container-bg: oklch(0.193 0.005 67.517);
+                --tag-bg: oklch(0.3 0.008 4.059);
+            }
+            @media (prefers-color-scheme: light) {
+                :root {
+                    --bg: #fff;
+                    --fg: oklch(0 0 0);
+                    --accent: oklch(0.7 0.307 78);
+                    --container-bg: oklch(0.948 0.004 106.475);
+                    --tag-bg: #fff;
+                }
+            }
+            @font-face {
+                font-family: "Karl";
+                src: url("karl-regular.otf");
+                font-weight: 400;
+            }
+            @font-face {
+                font-family: "Karl";
+                src: url("karl-medium.otf");
+                font-weight: 500;
+            }
+            @font-face {
+                font-family: "Karl";
+                src: url("karl-bold.otf");
+                font-weight: 700;
+            }
+            @font-face {
+                font-family: "Karl";
+                src: url("karl-ultrablack.otf");
+                font-weight: 900;
+            }
 
-    ::selection { background: var(--accent); color: #fff; }
+            ::selection {
+                background: var(--accent);
+                color: #fff;
+            }
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+            *,
+            *::before,
+            *::after {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
 
-    html, body {
-      width: 100%; height: 100%; overflow: hidden;
-      background: var(--bg);
-      font-family: 'Karl', sans-serif;
-      transition: background 0.4s;
-    }
+            html,
+            body {
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+                background: var(--bg);
+                font-family: "Karl", sans-serif;
+                transition: background 0.4s;
+            }
 
-    #canvas-wrap {
-      position: fixed; inset: 16px;
-      border-radius: 16px; overflow: hidden;
-      background: var(--container-bg);
-      transition: background 0.4s;
-    }
-    @media (max-width: 600px) {
-      #canvas-wrap {
-        inset: 12px;
-      }
-    }
+            #canvas-wrap {
+                position: fixed;
+                inset: 16px;
+                border-radius: 16px;
+                overflow: hidden;
+                background: var(--container-bg);
+                transition: background 0.4s;
+            }
+            @media (max-width: 600px) {
+                #canvas-wrap {
+                    inset: 12px;
+                }
+            }
 
-    canvas {
-      display: block; width: 100%; height: 100%;
-      touch-action: none; user-select: none;
-      pointer-events: none;
-      z-index: 500;
-    }
+            canvas {
+                display: block;
+                width: 100%;
+                height: 100%;
+                touch-action: none;
+                user-select: none;
+                pointer-events: none;
+                z-index: 500;
+            }
 
-    /* Content overlay */
+            /* Content overlay */
 
-    .content-overlay {
-      position: absolute; inset: 16px;
-      pointer-events: auto;
-      display: flex; flex-direction: column; justify-content: space-between;
-      z-index: -10;
-    }
+            .content-overlay {
+                position: absolute;
+                inset: 16px;
+                pointer-events: auto;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                z-index: -10;
+            }
 
-    .content-top {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      justify-content: space-between;
-    }
-    .content-top-left { display: flex; gap: 8px; flex-wrap: wrap; }
-    .content-top-right { display: flex; gap: 8px; align-items: flex-start; }
-    @media (max-width: 600px) {
-      .content-top {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-    }
+            .content-top {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                justify-content: space-between;
+            }
+            .content-top-left {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+            .content-top-right {
+                display: flex;
+                gap: 8px;
+                align-items: flex-start;
+            }
+            @media (max-width: 600px) {
+                .content-top {
+                    flex-direction: column;
+                    align-items: flex-start;
+                }
+            }
 
-    .content-bottom {
-      display: flex; align-items: flex-end;
-    }
+            .content-bottom {
+                display: flex;
+                align-items: flex-end;
+            }
 
-    .content-left { display: flex; flex-direction: column; gap: 8px; }
+            .content-left {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
 
-    .tag {
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-size: 15px; line-height: 20px;
-      width: fit-content; font-family: inherit;
-      transition: background 0.4s, color 0.4s;
-      background: var(--tag-bg); color: var(--fg);
-      font-weight: 500;
-      box-shadow: 0 0 8px color-mix(in oklch, var(--tag-bg), transparent 50%);
-    }
+            .tag {
+                padding: 8px 12px;
+                border-radius: 4px;
+                font-size: 15px;
+                line-height: 20px;
+                width: fit-content;
+                font-family: inherit;
+                transition:
+                    background 0.4s,
+                    color 0.4s;
+                background: var(--tag-bg);
+                color: var(--fg);
+                font-weight: 500;
+                box-shadow: 0 0 8px
+                    color-mix(in oklch, var(--tag-bg), transparent 50%);
+            }
 
-    .tag.accent {
-      background: var(--accent); color: #fff;
-      transition: background 0.4s;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-    }
+            .tag.accent {
+                background: var(--accent);
+                color: #fff;
+                transition: background 0.4s;
+                font-weight: 600;
+                letter-spacing: 0.06em;
+            }
 
-    .tag a {
-      color: inherit;
-      text-decoration: none;
-      border-bottom: 2px dotted color-mix(in oklch, var(--fg), transparent 50%);
-    }
+            .tag a {
+                color: inherit;
+                text-decoration: none;
+                border-bottom: 2px dotted
+                    color-mix(in oklch, var(--fg), transparent 50%);
+            }
 
-    .tag a:hover {
-      border-bottom: 2px dotted color-mix(in oklch, var(--fg), transparent 0%);
-    }
+            .tag a:hover {
+                border-bottom: 2px dotted
+                    color-mix(in oklch, var(--fg), transparent 0%);
+            }
 
-    #theme-toggle {
-      display: flex; align-items: center; justify-content: center;
-      background: color-mix(in oklch, var(--tag-bg), transparent 50%); border: none; border-radius: 4px;
-      padding: 8px; cursor: pointer;
-      color: var(--fg); transition: background 0.4s, color 0.4s;
-    }
-    @media (max-width: 600px) {
-      #theme-toggle {
-        position: absolute; right: 0; top: 0;
-      }
-    }
-    #theme-toggle:hover { background: color-mix(in oklch, var(--tag-bg), transparent 0%); }
-    #theme-toggle svg { width: 20px; height: 20px; fill: currentColor; }
-    #theme-toggle .icon-sun { display: none; }
-    #theme-toggle .icon-moon { display: block; }
-    [data-theme="light"] #theme-toggle .icon-sun { display: block; }
-    [data-theme="light"] #theme-toggle .icon-moon { display: none; }
+            #theme-toggle {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: color-mix(in oklch, var(--tag-bg), transparent 50%);
+                border: none;
+                border-radius: 4px;
+                padding: 8px;
+                cursor: pointer;
+                color: var(--fg);
+                transition:
+                    background 0.4s,
+                    color 0.4s;
+            }
+            @media (max-width: 600px) {
+                #theme-toggle {
+                    position: absolute;
+                    right: 0;
+                    top: 0;
+                }
+            }
+            #theme-toggle:hover {
+                background: color-mix(in oklch, var(--tag-bg), transparent 0%);
+            }
+            #theme-toggle svg {
+                width: 20px;
+                height: 20px;
+                fill: currentColor;
+            }
+            #theme-toggle .icon-sun {
+                display: none;
+            }
+            #theme-toggle .icon-moon {
+                display: block;
+            }
+            [data-theme="light"] #theme-toggle .icon-sun {
+                display: block;
+            }
+            [data-theme="light"] #theme-toggle .icon-moon {
+                display: none;
+            }
 
-    .social-icons { display: flex; gap: 12px; }
-    .social-icons a {
-      display: flex; align-items: center; justify-content: center;
-      color: var(--fg); transition: color 0.4s;
-    }
-    .social-icons svg { width: 20px; height: 20px; fill: color-mix(in oklch, var(--fg), transparent 50%); }
+            .social-icons {
+                display: flex;
+                gap: 12px;
+            }
+            .social-icons a {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: var(--fg);
+                transition: color 0.4s;
+            }
+            .social-icons svg {
+                width: 20px;
+                height: 20px;
+                fill: color-mix(in oklch, var(--fg), transparent 50%);
+            }
 
-    .social-icons span {
-      background: color-mix(in oklch, var(--tag-bg), transparent 50%);
-      font-weight: 400;
-    }
+            .social-icons span {
+                background: color-mix(in oklch, var(--tag-bg), transparent 50%);
+                font-weight: 400;
+            }
 
-    .social-icons span svg {
-      margin-right: 6px;
-    }
+            .social-icons span svg {
+                margin-right: 6px;
+            }
 
-    .social-icons span:hover {
-      background-color: var(--tag-bg);
-    }
+            .social-icons span:hover {
+                background-color: var(--tag-bg);
+            }
 
-    .social-icons span a {
-      border-bottom: none;
-    }
-    .social-icons span a:hover {
-      border-bottom: none;
-    }
+            .social-icons span a {
+                border-bottom: none;
+            }
+            .social-icons span a:hover {
+                border-bottom: none;
+            }
 
-    .stream-hide { display: none !important; }
-    .fade { opacity: 0; transition: opacity 0.4s; }
+            #city-tag:empty {
+                display: none;
+            }
+            #city-tag {
+                font-size: 15px;
+                line-height: 20px;
+                font-weight: 400;
+                color: color-mix(in oklch, var(--fg), transparent 50%);
+                font-family: inherit;
+                background: transparent;
+                user-select: none;
+                transition: color 0.4s;
+                border: 1px solid
+                    color-mix(in oklch, var(--fg), transparent 75%);
+            }
+            .stream-hide {
+                display: none !important;
+            }
+            .fade {
+                opacity: 0;
+                transition: opacity 0.4s;
+            }
 
-    #last-updated {
-      font-size: 15px; line-height: 20px;
-      font-weight: 400;
-      color: color-mix(in oklch, var(--fg), transparent 50%); font-family: inherit;
-      background: transparent;
-      user-select: none; transition: color 0.4s;
-      border: 1px solid color-mix(in oklch, var(--fg), transparent 75%);
-    }
+            #last-updated {
+                font-size: 15px;
+                line-height: 20px;
+                font-weight: 400;
+                color: color-mix(in oklch, var(--fg), transparent 50%);
+                font-family: inherit;
+                background: transparent;
+                user-select: none;
+                transition: color 0.4s;
+                border: 1px solid
+                    color-mix(in oklch, var(--fg), transparent 75%);
+            }
 
-    /* Controls panel */
+            /* Controls panel */
 
-    #controls-wrap {
-      display: none;
-    }
+            #controls-wrap {
+                display: none;
+            }
 
-    #toggle-btn {
-      pointer-events: auto;
-      margin-bottom: 8px; padding: 8px 20px; border-radius: 9999px;
-      font-size: 12px; font-family: inherit;
-      cursor: pointer; user-select: none;
-      background: color-mix(in oklch, var(--fg), transparent 95%);
-      color: color-mix(in oklch, var(--fg), transparent 65%);
-      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-      border: 1px solid color-mix(in oklch, var(--fg), transparent 94%);
-      min-height: 44px; min-width: 44px;
-      transition: opacity 0.4s, background 0.4s, color 0.4s, border-color 0.4s;
-    }
-    #toggle-btn:hover { opacity: 0.8; }
+            #toggle-btn {
+                pointer-events: auto;
+                margin-bottom: 8px;
+                padding: 8px 20px;
+                border-radius: 9999px;
+                font-size: 12px;
+                font-family: inherit;
+                cursor: pointer;
+                user-select: none;
+                background: color-mix(in oklch, var(--fg), transparent 95%);
+                color: color-mix(in oklch, var(--fg), transparent 65%);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+                border: 1px solid
+                    color-mix(in oklch, var(--fg), transparent 94%);
+                min-height: 44px;
+                min-width: 44px;
+                transition:
+                    opacity 0.4s,
+                    background 0.4s,
+                    color 0.4s,
+                    border-color 0.4s;
+            }
+            #toggle-btn:hover {
+                opacity: 0.8;
+            }
 
-    #panel {
-      display: none; pointer-events: auto;
-      width: 100%; max-width: 28rem;
-      padding: 16px 20px 32px; flex-direction: column; gap: 4px;
-      background: color-mix(in oklch, var(--bg), transparent 12%);
-      backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-      border-top: 1px solid color-mix(in oklch, var(--fg), transparent 95%);
-      transition: background 0.4s, border-color 0.4s;
-    }
-    #panel.open { display: flex; }
+            #panel {
+                display: none;
+                pointer-events: auto;
+                width: 100%;
+                max-width: 28rem;
+                padding: 16px 20px 32px;
+                flex-direction: column;
+                gap: 4px;
+                background: color-mix(in oklch, var(--bg), transparent 12%);
+                backdrop-filter: blur(24px);
+                -webkit-backdrop-filter: blur(24px);
+                border-top: 1px solid
+                    color-mix(in oklch, var(--fg), transparent 95%);
+                transition:
+                    background 0.4s,
+                    border-color 0.4s;
+            }
+            #panel.open {
+                display: flex;
+            }
 
-    .slider-row { display: flex; align-items: center; gap: 12px; }
+            .slider-row {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
 
-    .slider-label {
-      width: 80px; text-align: right; font-size: 11px;
-      color: color-mix(in oklch, var(--fg), transparent 55%);
-      flex-shrink: 0; user-select: none; transition: color 0.4s;
-    }
+            .slider-label {
+                width: 80px;
+                text-align: right;
+                font-size: 11px;
+                color: color-mix(in oklch, var(--fg), transparent 55%);
+                flex-shrink: 0;
+                user-select: none;
+                transition: color 0.4s;
+            }
 
-    .slider-track {
-      position: relative; flex: 1;
-      display: flex; align-items: center;
-      height: 44px; cursor: pointer; touch-action: none;
-    }
+            .slider-track {
+                position: relative;
+                flex: 1;
+                display: flex;
+                align-items: center;
+                height: 44px;
+                cursor: pointer;
+                touch-action: none;
+            }
 
-    .slider-bg {
-      position: absolute; left: 0; right: 0;
-      height: 2px; top: 50%; transform: translateY(-50%);
-      background: color-mix(in oklch, var(--fg), transparent 92%);
-      border-radius: 9999px; transition: background 0.4s;
-    }
+            .slider-bg {
+                position: absolute;
+                left: 0;
+                right: 0;
+                height: 2px;
+                top: 50%;
+                transform: translateY(-50%);
+                background: color-mix(in oklch, var(--fg), transparent 92%);
+                border-radius: 9999px;
+                transition: background 0.4s;
+            }
 
-    .slider-fill {
-      position: absolute; left: 0;
-      height: 2px; top: 50%; transform: translateY(-50%);
-      background: color-mix(in oklch, var(--accent), transparent 50%);
-      border-radius: 9999px;
-    }
+            .slider-fill {
+                position: absolute;
+                left: 0;
+                height: 2px;
+                top: 50%;
+                transform: translateY(-50%);
+                background: color-mix(in oklch, var(--accent), transparent 50%);
+                border-radius: 9999px;
+            }
 
-    .slider-thumb {
-      position: absolute; width: 14px; height: 14px;
-      top: 50%; transform: translate(-50%, -50%);
-      background: color-mix(in oklch, var(--accent), transparent 15%);
-      border-radius: 50%;
-      box-shadow: 0 0 8px color-mix(in oklch, var(--accent), transparent 60%);
-    }
+            .slider-thumb {
+                position: absolute;
+                width: 14px;
+                height: 14px;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                background: color-mix(in oklch, var(--accent), transparent 15%);
+                border-radius: 50%;
+                box-shadow: 0 0 8px
+                    color-mix(in oklch, var(--accent), transparent 60%);
+            }
 
-    .slider-val {
-      width: 32px; text-align: left; font-size: 11px;
-      color: color-mix(in oklch, var(--fg), transparent 70%);
-      flex-shrink: 0; user-select: none;
-      font-variant-numeric: tabular-nums; transition: color 0.4s;
-    }
+            .slider-val {
+                width: 32px;
+                text-align: left;
+                font-size: 11px;
+                color: color-mix(in oklch, var(--fg), transparent 70%);
+                flex-shrink: 0;
+                user-select: none;
+                font-variant-numeric: tabular-nums;
+                transition: color 0.4s;
+            }
 
-    .bg-toggle {
-      padding: 4px 14px; border-radius: 9999px;
-      font-family: inherit; font-size: 11px;
-      cursor: pointer; user-select: none; min-height: 28px;
-      background: color-mix(in oklch, var(--fg), transparent 95%);
-      color: color-mix(in oklch, var(--fg), transparent 55%);
-      border: 1px solid color-mix(in oklch, var(--fg), transparent 90%);
-      transition: background 0.4s, color 0.4s, border-color 0.4s;
-    }
-    .bg-toggle:hover { background: color-mix(in oklch, var(--fg), transparent 90%); }
-  </style>
-</head>
-<body>
-  <div id="canvas-wrap">
-    
-    <div class="content-overlay">
-      <div class="content-top">
-        <div class="content-top-left">
-          <span class="tag accent">Julian Francis Kelly</span>
-          <span class="tag">Interaction Designer</span>
+            .bg-toggle {
+                padding: 4px 14px;
+                border-radius: 9999px;
+                font-family: inherit;
+                font-size: 11px;
+                cursor: pointer;
+                user-select: none;
+                min-height: 28px;
+                background: color-mix(in oklch, var(--fg), transparent 95%);
+                color: color-mix(in oklch, var(--fg), transparent 55%);
+                border: 1px solid
+                    color-mix(in oklch, var(--fg), transparent 90%);
+                transition:
+                    background 0.4s,
+                    color 0.4s,
+                    border-color 0.4s;
+            }
+            .bg-toggle:hover {
+                background: color-mix(in oklch, var(--fg), transparent 90%);
+            }
+        </style>
+    </head>
+    <body>
+        <div id="canvas-wrap">
+            <div class="content-overlay">
+                <div class="content-top">
+                    <div class="content-top-left">
+                        <span class="tag accent">Julian Francis Kelly</span>
+                        <span class="tag">Interaction Designer</span>
+                    </div>
+                    <div class="content-top-right">
+                        <span class="tag fade" id="city-tag">Rome</span>
+                        <span class="tag fade" id="last-updated"></span>
+                        <button
+                            class="fade"
+                            id="theme-toggle"
+                            aria-label="Toggle theme"
+                        >
+                            <svg class="icon-sun" viewBox="0 0 20 20">
+                                <path
+                                    d="M10.833 1.667a.833.833 0 1 0-1.666 0v.833a.833.833 0 0 0 1.666 0v-.833ZM10.833 17.5a.833.833 0 1 0-1.666 0v.833a.833.833 0 0 0 1.666 0V17.5ZM16.48 3.52a.833.833 0 0 0-1.178 0l-.59.59a.833.833 0 0 0 1.178 1.179l.59-.59a.833.833 0 0 0 0-1.179ZM5.29 15.89a.833.833 0 0 0-1.179-1.179l-.59.59a.833.833 0 0 0 1.179 1.179l.59-.59ZM16.666 10a.833.833 0 0 1 .834-.833h.833a.833.833 0 0 1 0 1.666H17.5A.833.833 0 0 1 16.666 10ZM1.666 9.167a.833.833 0 1 0 0 1.666h.834a.833.833 0 0 0 0-1.666h-.834ZM14.71 14.71a.833.833 0 0 1 1.179 0l.59.59a.833.833 0 0 1-1.179 1.179l-.59-.59a.833.833 0 0 1 0-1.179ZM4.697 3.52a.833.833 0 0 0-1.178 1.178l.59.59a.833.833 0 0 0 1.179-1.178l-.59-.59ZM6.464 6.465a5 5 0 1 1 7.071 7.07 5 5 0 0 1-7.07-7.07Z"
+                                />
+                            </svg>
+                            <svg class="icon-moon" viewBox="0 0 20 20">
+                                <path
+                                    d="M10.043 3a.833.833 0 0 0-.756-1.304C5.018 2.058 1.667 5.636 1.667 10c0 4.602 3.73 8.33 8.332 8.33 4.362 0 7.94-3.352 8.301-7.62a.833.833 0 0 0-1.303-.757A5.833 5.833 0 0 1 10.043 3Z"
+                                />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="content-bottom">
+                    <div class="content-left">
+                        <span class="tag">Welcome!</span>
+                        <span class="tag"
+                            >I work across motion, visual, and interaction
+                            design.</span
+                        >
+                        <span class="tag"
+                            >Currently, I'm at
+                            <a
+                                href="https://shop.app"
+                                target="_blank"
+                                rel="noopener"
+                                >Shopify</a
+                            >.</span
+                        >
+                        <span class="tag"
+                            >I've designed for
+                            <a
+                                href="https://conductor.build"
+                                target="_blank"
+                                rel="noopener"
+                                >Conductor</a
+                            >,
+                            <a
+                                href="https://techcrunch.com/2024/06/21/dots-ai-really-really-wants-to-get-to-know-you/"
+                                target="_blank"
+                                rel="noopener"
+                                >New Computer</a
+                            >,
+                            <a
+                                href="https://net.inc"
+                                target="_blank"
+                                rel="noopener"
+                                >Net</a
+                            >,
+                            <a
+                                href="https://cosmos.so"
+                                target="_blank"
+                                rel="noopener"
+                                >Cosmos</a
+                            >,
+                            <a
+                                href="https://messenger.com"
+                                target="_blank"
+                                rel="noopener"
+                                >Messenger</a
+                            >,
+                            <a
+                                href="https://heartmountain.org"
+                                target="_blank"
+                                rel="noopener"
+                                >Heart Mountain</a
+                            >,
+                            <a
+                                href="https://nytimes.com"
+                                target="_blank"
+                                rel="noopener"
+                                >The New York Times</a
+                            >, and many others.</span
+                        >
+                        <span class="tag"
+                            >Each year I teach at the
+                            <a
+                                href="https://ciid.dk"
+                                target="_blank"
+                                rel="noopener"
+                                >Copenhagen Institute of Interaction Design</a
+                            >.</span
+                        >
+                        <span class="tag"
+                            >I hold a BFA in Graphic Design from
+                            <a
+                                href="https://risd.gd"
+                                target="_blank"
+                                rel="noopener"
+                                >RISD</a
+                            >.</span
+                        >
+                        <div class="social-icons">
+                            <span class="tag fade">
+                                <a
+                                    href="mailto:julian@jfk.works"
+                                    aria-label="Email"
+                                    ><svg viewBox="0 0 20 20">
+                                        <path
+                                            d="M1.782 5.793C2.166 4.376 3.461 3.334 5 3.334h10c1.538 0 2.834 1.042 3.217 2.459l-7.472 3.736a1.667 1.667 0 0 1-1.49 0L1.782 5.793Z"
+                                        />
+                                        <path
+                                            d="M1.667 7.599v5.734c0 1.841 1.492 3.334 3.333 3.334h10c1.841 0 3.334-1.493 3.334-3.334V7.599l-6.843 3.42a3.333 3.333 0 0 1-2.981 0L1.667 7.599Z"
+                                        />
+                                    </svg>
+                                    julian@jfk.works</a
+                                >
+                            </span>
+                            <span class="tag fade">
+                                <a
+                                    href="https://twitter.com/julianfkelly"
+                                    target="_blank"
+                                    rel="noopener"
+                                    aria-label="Twitter"
+                                    ><svg viewBox="0 0 20 20">
+                                        <path
+                                            d="M19.375 4.276a7.508 7.508 0 0 1-2.209.596 3.832 3.832 0 0 0 1.691-2.096 7.652 7.652 0 0 1-2.443.917A3.842 3.842 0 0 0 13.607 2.5c-2.124 0-3.846 1.696-3.846 3.788 0 .296.034.584.099.862a10.94 10.94 0 0 1-7.93-3.957 3.756 3.756 0 0 0-.52 1.904c0 1.313.68 2.473 1.711 3.152a3.85 3.85 0 0 1-1.742-.474v.049c0 1.835 1.326 3.366 3.086 3.714a3.872 3.872 0 0 1-1.013.139 3.84 3.84 0 0 1-.724-.066c.49 1.503 1.91 2.599 3.594 2.629a7.72 7.72 0 0 1-4.778 1.621c-.31 0-.617-.018-.918-.053A10.904 10.904 0 0 0 6.52 17.5c7.077 0 10.946-5.77 10.946-10.773 0-.163-.004-.327-.011-.49a7.763 7.763 0 0 0 1.918-1.963l.002-.002Z"
+                                        />
+                                    </svg>
+                                    @julianfkelly</a
+                                >
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <canvas id="c" role="presentation"></canvas>
         </div>
-        <div class="content-top-right">
-          <span class="tag fade" id="last-updated"></span>
-          <button class="fade" id="theme-toggle" aria-label="Toggle theme">
-            <svg class="icon-sun" viewBox="0 0 20 20"><path d="M10.833 1.667a.833.833 0 1 0-1.666 0v.833a.833.833 0 0 0 1.666 0v-.833ZM10.833 17.5a.833.833 0 1 0-1.666 0v.833a.833.833 0 0 0 1.666 0V17.5ZM16.48 3.52a.833.833 0 0 0-1.178 0l-.59.59a.833.833 0 0 0 1.178 1.179l.59-.59a.833.833 0 0 0 0-1.179ZM5.29 15.89a.833.833 0 0 0-1.179-1.179l-.59.59a.833.833 0 0 0 1.179 1.179l.59-.59ZM16.666 10a.833.833 0 0 1 .834-.833h.833a.833.833 0 0 1 0 1.666H17.5A.833.833 0 0 1 16.666 10ZM1.666 9.167a.833.833 0 1 0 0 1.666h.834a.833.833 0 0 0 0-1.666h-.834ZM14.71 14.71a.833.833 0 0 1 1.179 0l.59.59a.833.833 0 0 1-1.179 1.179l-.59-.59a.833.833 0 0 1 0-1.179ZM4.697 3.52a.833.833 0 0 0-1.178 1.178l.59.59a.833.833 0 0 0 1.179-1.178l-.59-.59ZM6.464 6.465a5 5 0 1 1 7.071 7.07 5 5 0 0 1-7.07-7.07Z"/></svg>
-            <svg class="icon-moon" viewBox="0 0 20 20"><path d="M10.043 3a.833.833 0 0 0-.756-1.304C5.018 2.058 1.667 5.636 1.667 10c0 4.602 3.73 8.33 8.332 8.33 4.362 0 7.94-3.352 8.301-7.62a.833.833 0 0 0-1.303-.757A5.833 5.833 0 0 1 10.043 3Z"/></svg>
-          </button>
+
+        <div id="controls-wrap">
+            <button id="toggle-btn">Controls</button>
+            <div id="panel"></div>
         </div>
-      </div>
-      <div class="content-bottom">
-        <div class="content-left">
-          <span class="tag">Welcome!</span>
-          <span class="tag">I work across motion, visual, and interaction design.</span>
-          <span class="tag">Currently, I'm at <a href="https://shop.app" target="_blank" rel="noopener">Shopify</a>.</span>
-          <span class="tag">I've designed for <a href="https://conductor.build" target="_blank" rel="noopener">Conductor</a>, <a href="https://techcrunch.com/2024/06/21/dots-ai-really-really-wants-to-get-to-know-you/" target="_blank" rel="noopener">New Computer</a>, <a href="https://net.inc" target="_blank" rel="noopener">Net</a>, <a href="https://cosmos.so" target="_blank" rel="noopener">Cosmos</a>, <a href="https://messenger.com" target="_blank" rel="noopener">Messenger</a>, <a href="https://heartmountain.org" target="_blank" rel="noopener">Heart Mountain</a>, <a href="https://nytimes.com" target="_blank" rel="noopener">The New York Times</a>, and many others.</span>
-          <span class="tag">Each year I teach at the <a href="https://ciid.dk" target="_blank" rel="noopener">Copenhagen Institute of Interaction Design</a>.</span>
-          <span class="tag">I hold a BFA in Graphic Design from <a href="https://risd.gd" target="_blank" rel="noopener">RISD</a>.</span>
-          <div class="social-icons">
-            <span class="tag fade">
-              <a href="mailto:julian@jfk.works" aria-label="Email"><svg viewBox="0 0 20 20"><path d="M1.782 5.793C2.166 4.376 3.461 3.334 5 3.334h10c1.538 0 2.834 1.042 3.217 2.459l-7.472 3.736a1.667 1.667 0 0 1-1.49 0L1.782 5.793Z"/><path d="M1.667 7.599v5.734c0 1.841 1.492 3.334 3.333 3.334h10c1.841 0 3.334-1.493 3.334-3.334V7.599l-6.843 3.42a3.333 3.333 0 0 1-2.981 0L1.667 7.599Z"/></svg> julian@jfk.works</a>
-            </span>
-            <span class="tag fade">
-              <a href="https://twitter.com/julianfkelly" target="_blank" rel="noopener" aria-label="Twitter"><svg viewBox="0 0 20 20"><path d="M19.375 4.276a7.508 7.508 0 0 1-2.209.596 3.832 3.832 0 0 0 1.691-2.096 7.652 7.652 0 0 1-2.443.917A3.842 3.842 0 0 0 13.607 2.5c-2.124 0-3.846 1.696-3.846 3.788 0 .296.034.584.099.862a10.94 10.94 0 0 1-7.93-3.957 3.756 3.756 0 0 0-.52 1.904c0 1.313.68 2.473 1.711 3.152a3.85 3.85 0 0 1-1.742-.474v.049c0 1.835 1.326 3.366 3.086 3.714a3.872 3.872 0 0 1-1.013.139 3.84 3.84 0 0 1-.724-.066c.49 1.503 1.91 2.599 3.594 2.629a7.72 7.72 0 0 1-4.778 1.621c-.31 0-.617-.018-.918-.053A10.904 10.904 0 0 0 6.52 17.5c7.077 0 10.946-5.77 10.946-10.773 0-.163-.004-.327-.011-.49a7.763 7.763 0 0 0 1.918-1.963l.002-.002Z"/></svg> @julianfkelly</a>
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-    <canvas id="c" role="presentation"></canvas>
-  </div>
-
-  <div id="controls-wrap">
-    <button id="toggle-btn">Controls</button>
-    <div id="panel"></div>
-  </div>
-
-  <script>
-  // --- Hide content for streaming effect (must run before first paint) ---
-  document.querySelectorAll('.content-top-left .tag:not(.fade), .content-left > .tag:not(.fade)')
-    .forEach(function(el) { el.classList.add('stream-hide'); });
-  setTimeout(function() { document.querySelectorAll('.social-icons .fade').forEach(function(el) { el.style.opacity = '1'; }); }, 400);
-  function revealAfterStream() { document.getElementById('last-updated').style.opacity = '1'; document.getElementById('theme-toggle').style.opacity = '1'; }
-
-  // ==========================================================================
-  //  TAXONOMY
-  //
-  //  Dot  — the smallest element; a single tiny circle drawn on the canvas.
-  //  Star — a cluster of dots arranged in concentric sub-rings.
-  //  Ring — a large circular arrangement of stars around the center.
-  //
-  //  Visual hierarchy (outside → in):  Ring  →  Star  →  Dot
-  // ==========================================================================
-
-  // --- Layout constants ---
-
-  // -- Star internals: each star is a cluster of dots in concentric sub-rings --
-  const DOTS_PER_SUBRING = [3, 9, 14, 20, 28];           // dots in each sub-ring (innermost first)
-  const SUBRING_OFFSETS = [0.75, 0.25, 0.75, 0.125, 0.5]; // rotational offset per sub-ring
-
-  const DOT_SUBRING_SPACING = 8;   // px gap between concentric sub-rings of dots within a star
-  const DOT_RADIUS = 8;            // drawn radius of each dot
-  const DOT_INNER_OFFSET = 1;      // radial offset for the innermost sub-ring
-
-  // -- Ring layout: stars are arranged in concentric rings around the center --
-  const MAX_RINGS = 10;            // maximum rings the slider can reach
-  const STAR_SPACING = 100;        // px gap between stars along a ring
-
-  // How many stars sit in each ring (grows with circumference)
-  const STARS_PER_RING = [3, 9, 14, 20, 28, 37, 47, 58, 70, 83];
-  // Rotational offset per ring to avoid a gridded look
-  const RING_OFFSETS = [0.75, 0.25, 0.75, 0.125, 0.5, 0.375, 0.625, 0.875, 0.1875, 0.5625];
-
-  // Derived totals (allocated for MAX_RINGS so the buffers never need to grow)
-  const DOTS_PER_STAR = DOTS_PER_SUBRING.reduce((a, b) => a + b, 0); // 74
-  const MAX_TOTAL_STARS = STARS_PER_RING.reduce((a, b) => a + b, 0); // 369
-  const BUF_SIZE = MAX_TOTAL_STARS + 10;
-
-  const ANIM_FRAMES = 180;
-  const TWO_PI = Math.PI * 2;
-
-  // --- Utility functions ---
-
-  // Seeded PRNG (mulberry32) — deterministic randomness so the pattern is stable
-  function mulberry32(seed) {
-    return function () {
-      let t = (seed += 0x6d2b79f5);
-      t = Math.imul(t ^ (t >>> 15), t | 1);
-      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-  }
-
-  function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
-  function mapVal(v, a1, b1, a2, b2) { return a2 + (b2 - a2) * ((v - a1) / (b1 - a1)); }
-  function normVal(v, a, b) { return (v - a) / (b - a); }
-
-  // --- Parameters (controlled by sliders) ---
-  // rings: 0..1 maps to 1..MAX_RINGS (default → 4)
-  const LCH_DARK  = { lightness: 0.72, chroma: 0.78, hue: 24/360 };
-  const LCH_LIGHT = { lightness: 0.80, chroma: 0.79, hue: 42/360 };
-  const systemLight = window.matchMedia('(prefers-color-scheme: light)').matches;
-  const params = { arcMin: 0, arcMax: 0, decay: 0, speed: 0.3, density: 0.30, spread: 0.52, rings: 7/9, ...(systemLight ? LCH_LIGHT : LCH_DARK), light: systemLight };
-  if (systemLight) document.documentElement.setAttribute('data-theme', 'light');
-  const sliderUpdaters = {}; // keyed by param name, set during slider setup
-
-  // --- Animation state ---
-  // Pre-computed random values, seeded so every load looks the same.
-  const rng = mulberry32(42);
-  const ringRand = new Float32Array(MAX_RINGS);            // one random value per ring (shared by all stars in a ring)
-  const starRand = new Float32Array(BUF_SIZE);             // one random value per star
-  const totalDotSlots = BUF_SIZE * DOTS_PER_STAR;
-  const dotRand = new Float32Array(totalDotSlots);         // one random value per dot
-  const dotBrightness = new Float32Array(totalDotSlots);   // retained brightness per dot (for decay trails)
-  for (let i = 0; i < MAX_RINGS; i++) ringRand[i] = rng();
-  for (let i = 0; i < BUF_SIZE; i++) starRand[i] = rng();
-  for (let i = 0; i < totalDotSlots; i++) dotRand[i] = rng();
-  let time = 0;
-
-  // --- Canvas setup ---
-  const wrap = document.getElementById('canvas-wrap');
-  const canvas = document.getElementById('c');
-  const ctx = canvas.getContext('2d');
-
-  function resize() {
-    const dpr = window.devicePixelRatio || 1;
-    const w = wrap.clientWidth;
-    const h = wrap.clientHeight;
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-  resize();
-  window.addEventListener('resize', resize);
-
-  // --- Draw a single star (cluster of dots) ---
-  // effectiveArc: 0..1 fraction of each sub-ring arc that's visible (computed per-star by radial wave)
-  function drawStar(x, y, starIndex, progress, scale, p, effectiveArc) {
-    const arcFrac = effectiveArc;                         // fraction of each sub-ring arc that's visible
-    const threshScale = mapVal(p.density, 0, 1, 6, 0);   // wave activation threshold (lower = more dots)
-    const decaySpeed = mapVal(p.decay, 0, 1, 0.2, 15);   // how fast dots fade out
-
-    // Sine wave drives dot activation across the star's cycle
-    const wave = normVal(Math.sin(progress * TWO_PI), -1, 1);
-    const baseThresh = mapVal(wave, 0, 1, 0, threshScale + starRand[starIndex % starRand.length] * 2);
-
-    const subringGap = DOT_SUBRING_SPACING * scale;
-    const innerOffset = DOT_INNER_OFFSET * scale;
-    const dotHalfR = (DOT_RADIUS * scale) / 2;
-
-    // Walk through each sub-ring of dots within this star
-    let di = starIndex * DOTS_PER_STAR; // dot index into the flat random/brightness arrays
-    for (let sri = 0; sri < DOTS_PER_SUBRING.length; sri++) {
-      const dotsInSubring = DOTS_PER_SUBRING[sri];
-      if (di + dotsInSubring > dotRand.length) break;
-
-      // Each sub-ring has its own wave frequency and phase offset
-      const freq = Math.floor(Math.max(dotRand[di] * 4 - 2, 0)) + 1;
-      const localOffset = (progress * freq + Math.abs(dotRand[di] / 1.5)) % 1;
-      // Weighting: inner sub-rings are brighter (ringWeight goes 1 → 0)
-      const ringWeight = mapVal(sri, 0, DOTS_PER_SUBRING.length - 1, 1, 0);
-
-      // Place each dot around the sub-ring
-      for (let j = 0; j < dotsInSubring; j++) {
-        const theta = (TWO_PI / dotsInSubring) * j + SUBRING_OFFSETS[sri] * TWO_PI;
-        const rad = subringGap * (sri + 0.5) + innerOffset;
-        const dotX = rad * Math.cos(theta) + x;
-        const dotY = rad * Math.sin(theta) + y;
-
-        // --- Arc culling: only draw dots within the visible arc ---
-        const waveAngle = (localOffset * TWO_PI) % TWO_PI;
-        const dotAngle = ((theta % TWO_PI) + TWO_PI) % TWO_PI;
-        let angleDiff = Math.abs(dotAngle - waveAngle);
-        if (angleDiff > Math.PI) angleDiff = TWO_PI - angleDiff;
-
-        if (angleDiff > arcFrac * Math.PI) {
-          // Outside the visible arc — just decay the dot's stored brightness
-          dotBrightness[di] = clamp(dotBrightness[di] - decaySpeed, 0, 100);
-          di++;
-          continue;
-        }
-
-        // --- Dot activation (wave-based) ---
-        const rp = normVal(Math.sin(theta + (localOffset + dotRand[di] * TWO_PI) * TWO_PI * 2), -1, 1);
-        const amp = Math.abs(dotRand[di] * rp * rp);
-        const brightness_wave = mapVal(Math.sin(theta + localOffset * TWO_PI), -1, 1, 0, 2 - dotRand[di] + ringWeight / 2) + amp;
-        const vel = Math.cos(theta + localOffset * TWO_PI);
-
-        let br = dotBrightness[di] || 0;
-        if (brightness_wave > baseThresh && vel >= 0) {
-          br = Math.ceil(100 - dotRand[di] * 10 + ringWeight * 20);
-        } else if (brightness_wave > baseThresh && vel < 0) {
-          br = Math.floor(100 + 20 * vel);
-        } else {
-          br = clamp(br - Math.ceil(decaySpeed / (ringWeight + 1)), 0, 50);
-        }
-        if (br < 0) br = 0;
-        dotBrightness[di] = br;
-
-        // --- Final brightness (quantized to steps of 10) ---
-        const finalB = Math.floor(br / 10) * 10;
-
-        // --- Draw the dot (oklch with alpha) ---
-        if (finalB > 0.5) {
-          const bN = finalB / 100;
-          const L = p.lightness;
-          const C = p.chroma * 0.37;
-          const H = p.hue * 360 + dotRand[di] * 55 + finalB * 0.25 - 40;
-          ctx.fillStyle = `oklch(${L.toFixed(2)} ${C.toFixed(3)} ${H.toFixed(1)} / ${bN.toFixed(2)})`;
-          ctx.beginPath();
-          ctx.arc(dotX, dotY, dotHalfR, 0, TWO_PI);
-          ctx.fill();
-        }
-        di++;
-      }
-    }
-  }
-
-  // --- Main animation loop ---
-  let prevT = performance.now();
-  function frame(now) {
-    const dt = (now - prevT) / 1000;
-    prevT = now;
-    time += dt * mapVal(params.speed, 0, 1, 0.15, 3);
-
-    const dpr = window.devicePixelRatio || 1;
-    const w = canvas.width / dpr, h = canvas.height / dpr;
-    const scale = Math.min(w, h) / 900 * (w < 600 ? 1.75 : 1);
-    ctx.clearRect(0, 0, w, h);
-
-    const cycleSec = ANIM_FRAMES / 60; // seconds per animation cycle at base speed
-    const cycleProgress = (time / cycleSec) % 1;
-    const cx = w / 2, cy = h / 2;
-
-    // Current ring count from the slider (1..MAX_RINGS)
-    const activeRings = Math.round(mapVal(params.rings, 0, 1, 1, MAX_RINGS));
-
-    // Star spacing along each ring, affected by the "spread" slider
-    const starGap = STAR_SPACING * scale * mapVal(params.spread, 0, 1, 0.4, 1.6);
-
-    const maxRingRadius = starGap * (activeRings - 1 + 0.5) + starGap / 4;
-
-    // Arc wave: a sine wave radiating outward from center, synced to animation cycle.
-    // Each star's visible arc oscillates between arcMin and arcMax, with inner stars
-    // leading and outer stars lagging — creating a breathing/pulsing radial effect.
-    const arcWavePhase = time / cycleSec * TWO_PI;
-
-    // Walk through each ring, then each star in that ring
-    let starIndex = 0;
-    for (let ri = 0; ri < activeRings; ri++) {
-      const starsInRing = STARS_PER_RING[ri];
-      for (let j = 0; j < starsInRing; j++) {
-        // Place this star around the ring
-        const theta = (TWO_PI / starsInRing) * j + RING_OFFSETS[ri] * TWO_PI;
-        const ringRadius = starGap * (ri + 0.5) + starGap / 4;
-        const starX = ringRadius * Math.cos(theta) + cx;
-        const starY = ringRadius * Math.sin(theta) + cy;
-
-        // Radial arc wave: stars closer to center lead, outer stars lag
-        const distNorm = maxRingRadius > 0 ? ringRadius / maxRingRadius : 0;
-        const arcWave = (Math.sin(arcWavePhase - distNorm * TWO_PI) + 1) / 2; // 0..1
-        const effectiveArc = params.arcMin + (params.arcMax - params.arcMin) * arcWave;
-
-        // All stars in a ring share the same random phase offset (ringRand),
-        // so the wave front sweeps coherently around each ring (the "rotating" look).
-        // Integer division on the ring term matches the original Processing sketch.
-        const starProgress = (cycleProgress + normVal(theta, 0, TWO_PI) + ringRand[ri] + Math.floor((ri * 2) / activeRings)) % 1;
-
-        drawStar(starX, starY, starIndex, starProgress, scale, params, effectiveArc);
-        starIndex++;
-      }
-    }
-    requestAnimationFrame(frame);
-  }
-  requestAnimationFrame(frame);
-
-  // --- Controls UI ---
-  function updateAccent() {
-    const c = Math.max(params.chroma * 0.37, 0.05);
-    document.documentElement.style.setProperty('--accent', `oklch(${params.lightness.toFixed(2)} ${c.toFixed(3)} ${params.hue * 360})`);
-  }
-
-  const SLIDERS = [
-    { key: 'rings',      label: 'Rings',        display: v => Math.round(mapVal(v, 0, 1, 1, MAX_RINGS)) },
-    { key: 'arcMin',     label: 'Dot Arc Min' },
-    { key: 'arcMax',     label: 'Dot Arc Max' },
-    { key: 'decay',      label: 'Dot Decay' },
-    { key: 'density',    label: 'Dot Density' },
-    { key: 'speed',      label: 'Speed' },
-    { key: 'spread',     label: 'Star Spread' },
-    { key: 'lightness',  label: 'Lightness', onChange: updateAccent },
-    { key: 'chroma',     label: 'Chroma',      onChange: updateAccent },
-    { key: 'hue',        label: 'Hue',         display: v => Math.round(v * 360), onChange: updateAccent },
-  ];
-
-  const panel = document.getElementById('panel');
-  const toggleBtn = document.getElementById('toggle-btn');
-  let panelOpen = false;
-
-  toggleBtn.addEventListener('click', () => {
-    panelOpen = !panelOpen;
-    panel.classList.toggle('open', panelOpen);
-    toggleBtn.textContent = panelOpen ? 'Hide' : 'Controls';
-  });
-
-  SLIDERS.forEach(({ key, label, display, onChange }) => {
-    const row = document.createElement('div');
-    row.className = 'slider-row';
-
-    const lbl = document.createElement('span');
-    lbl.className = 'slider-label';
-    lbl.textContent = label;
-
-    const track = document.createElement('div');
-    track.className = 'slider-track';
-    track.setAttribute('role', 'slider');
-    track.setAttribute('aria-label', label);
-    track.setAttribute('aria-valuemin', '0');
-    track.setAttribute('aria-valuemax', '100');
-
-    const bg = document.createElement('div');
-    bg.className = 'slider-bg';
-    const fill = document.createElement('div');
-    fill.className = 'slider-fill';
-    const thumb = document.createElement('div');
-    thumb.className = 'slider-thumb';
-
-    track.append(bg, fill, thumb);
-
-    const valSpan = document.createElement('span');
-    valSpan.className = 'slider-val';
-
-    function updateVisual(v) {
-      const pct = v * 100;
-      fill.style.width = pct + '%';
-      thumb.style.left = pct + '%';
-      const displayVal = display ? display(v) : Math.round(pct);
-      valSpan.textContent = displayVal;
-      track.setAttribute('aria-valuenow', String(displayVal));
-    }
-    updateVisual(params[key]);
-    sliderUpdaters[key] = updateVisual;
-
-    let dragging = false;
-    function setFromX(clientX) {
-      const r = track.getBoundingClientRect();
-      const v = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
-      params[key] = v;
-      updateVisual(v);
-      if (onChange) onChange();
-    }
-
-    track.addEventListener('pointerdown', (e) => {
-      dragging = true;
-      track.setPointerCapture(e.pointerId);
-      setFromX(e.clientX);
-    });
-    track.addEventListener('pointermove', (e) => { if (dragging) setFromX(e.clientX); });
-    track.addEventListener('pointerup', () => { dragging = false; });
-    track.addEventListener('pointercancel', () => { dragging = false; });
-
-    row.append(lbl, track, valSpan);
-    panel.appendChild(row);
-  });
-
-  // --- Background toggle ---
-  const bgRow = document.createElement('div');
-  bgRow.className = 'slider-row';
-  const bgLabel = document.createElement('span');
-  bgLabel.className = 'slider-label';
-  bgLabel.textContent = 'Background';
-  const bgBtn = document.createElement('button');
-  bgBtn.className = 'bg-toggle';
-  bgBtn.textContent = params.light ? 'Light' : 'Dark';
-  function applyTheme() {
-    const root = document.documentElement;
-    if (params.light) root.setAttribute('data-theme', 'light');
-    else root.removeAttribute('data-theme');
-    bgBtn.textContent = params.light ? 'Light' : 'Dark';
-    root.style.setProperty('--bg', params.light ? '#fff' : '#000');
-    root.style.setProperty('--fg', params.light ? 'oklch(0 0 0)' : 'oklch(0.948 0.004 106.475)');
-    root.style.setProperty('--container-bg', params.light ? 'oklch(0.948 0.004 106.475)' : 'oklch(0.193 0.005 67.517)');
-    root.style.setProperty('--tag-bg', params.light ? '#fff' : 'oklch(0.241 0.008 4.059)');
-    document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.content = params.light ? '#f7f6f2' : '#302a25');
-    const preset = params.light ? LCH_LIGHT : LCH_DARK;
-    for (const k in preset) {
-      params[k] = preset[k];
-      if (sliderUpdaters[k]) sliderUpdaters[k](params[k]);
-    }
-    updateAccent();
-  }
-  bgBtn.addEventListener('click', () => { params.light = !params.light; applyTheme(); });
-  bgRow.append(bgLabel, bgBtn);
-  panel.appendChild(bgRow);
-
-  // --- Theme toggle button (sun/moon) ---
-  document.getElementById('theme-toggle').addEventListener('click', () => { params.light = !params.light; applyTheme(); });
-
-  // --- Set --accent from initial params ---
-  updateAccent();
-
-  // --- Intro animation: ease arcMin & arcMax from 0 to target ---
-  function startIntroBloom() {
-    const targets = { arcMin: 0.10, arcMax: 0.95 };
-    const duration = 5000; // ms
-    const start = performance.now();
-    function ease(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; } // easeInOutQuad
-    function tick(now) {
-      const t = Math.min((now - start) / duration, 1);
-      const e = ease(t);
-      for (const key in targets) {
-        params[key] = targets[key] * e;
-        if (sliderUpdaters[key]) sliderUpdaters[key](params[key]);
-      }
-      if (t < 1) requestAnimationFrame(tick);
-      else oscillateArcMin();
-    }
-    requestAnimationFrame(tick);
-  }
-
-  // --- Oscillate arcMin between 10 and 80 over 5s ---
-  function oscillateArcMin() {
-    const lo = 0.10, hi = 0.80;
-    const mid = (lo + hi) / 2, amp = (hi - lo) / 2;
-    const period = 10000;
-    const origin = performance.now();
-    function wave(now) {
-      const v = mid - amp * Math.cos(TWO_PI * (now - origin) / period);
-      params.arcMin = v;
-      if (sliderUpdaters.arcMin) sliderUpdaters.arcMin(v);
-      requestAnimationFrame(wave);
-    }
-    requestAnimationFrame(wave);
-  }
-
-  // --- Last updated (from GitHub API) ---
-  fetch('https://api.github.com/repos/juliankellydesign/juliankellydesign.github.io/commits?per_page=1&sha=main')
-    .then(r => r.ok ? r.json() : Promise.reject())
-    .then(([c]) => {
-      const d = new Date(c.commit.committer.date);
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      const dd = String(d.getDate()).padStart(2, '0');
-      document.getElementById('last-updated').textContent = 'Updated ' + yyyy + '.' + mm + '.' + dd;
-    })
-    .catch(() => {});
-
-  // --- LLM-style streaming text effect ---
-  (function () {
-    // Approximate syllable splitting for token simulation
-    function syllabify(word) {
-      // Keep contractions whole (I'm, I've, don't, etc.)
-      if (word.includes("'")) return [word];
-      // Split email-like strings on @ and .
-      if (/[@.]/.test(word)) {
-        return word.split(/([@.])/).filter(Boolean).flatMap(part =>
-          part.match(/[^aeiouy]*[aeiouy]+[^aeiouy]*/gi) || [part]
-        );
-      }
-      return word.match(/[^aeiouy]*[aeiouy]+[^aeiouy]*/gi) || [word];
-    }
-
-    function tokenize(text) {
-      if (!text) return [];
-      const parts = text.split(/( +)/);
-      const tokens = [];
-      for (const p of parts) {
-        if (!p) continue;
-        if (/^ +$/.test(p)) tokens.push(p);
-        else tokens.push(...syllabify(p));
-      }
-      return tokens;
-    }
-
-    function getTextNodes(el) {
-      const nodes = [];
-      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-      while (walker.nextNode()) {
-        if (walker.currentNode.textContent.trim()) nodes.push(walker.currentNode);
-      }
-      return nodes;
-    }
-
-    // Collect tags in stream order: top-left, then bottom bio (excluding .fade)
-    const topTags = [...document.querySelectorAll('.content-top-left .tag:not(.fade)')];
-    const bottomTags = [...document.querySelectorAll('.content-left > .tag:not(.fade)')];
-    const allTags = [...topTags, ...bottomTags];
-
-    // Build a flat queue of tokens across all tags
-    const queue = [];
-    for (const tag of allTags) {
-      const textNodes = getTextNodes(tag);
-      const nodeData = textNodes.map(n => ({
-        node: n, tokens: tokenize(n.textContent)
-      }));
-      // Clear all text content
-      nodeData.forEach(nd => { nd.node.textContent = ''; });
-
-      let isFirst = true;
-      for (const nd of nodeData) {
-        for (const token of nd.tokens) {
-          queue.push({ tag, node: nd.node, token, isFirstInTag: isFirst });
-          isFirst = false;
-        }
-      }
-    }
-
-    // Stream tokens with LLM-like timing
-    let qi = 0;
-    const BASE_DELAY = 35;
-    const TAG_PAUSE = 120;
-
-    function next() {
-      if (qi >= queue.length) { revealAfterStream(); startIntroBloom(); return; }
-
-      const entry = queue[qi];
-
-      // Show tag when its first token arrives
-      if (entry.isFirstInTag) {
-        entry.tag.classList.remove('stream-hide');
-      }
-
-      entry.node.textContent += entry.token;
-      qi++;
-
-      // Add extra delay between tags for a natural "thinking" pause
-      const isNewTag = qi < queue.length && queue[qi].isFirstInTag;
-      setTimeout(next, BASE_DELAY + Math.random() * 25 + (isNewTag ? TAG_PAUSE : 0));
-    }
-
-    setTimeout(next, 400);
-  })();
-  </script>
-</body>
+
+        <script>
+            // --- Hide content for streaming effect (must run before first paint) ---
+            document
+                .querySelectorAll(
+                    ".content-top-left .tag:not(.fade), .content-left > .tag:not(.fade)",
+                )
+                .forEach(function (el) {
+                    el.classList.add("stream-hide");
+                });
+            setTimeout(function () {
+                document
+                    .querySelectorAll(".social-icons .fade")
+                    .forEach(function (el) {
+                        el.style.opacity = "1";
+                    });
+            }, 400);
+            function revealAfterStream() {
+                document.getElementById("last-updated").style.opacity = "1";
+                document.getElementById("theme-toggle").style.opacity = "1";
+                var cityTag = document.getElementById("city-tag");
+                if (cityTag) cityTag.style.opacity = "1";
+            }
+
+            // ==========================================================================
+            //  TAXONOMY
+            //
+            //  Dot  — the smallest element; a single tiny circle drawn on the canvas.
+            //  Star — a cluster of dots arranged in concentric sub-rings.
+            //  Ring — a large circular arrangement of stars around the center.
+            //
+            //  Visual hierarchy (outside → in):  Ring  →  Star  →  Dot
+            // ==========================================================================
+
+            // --- Layout constants ---
+
+            // -- Star internals: each star is a cluster of dots in concentric sub-rings --
+            const DOTS_PER_SUBRING = [3, 9, 14, 20, 28]; // dots in each sub-ring (innermost first)
+            const SUBRING_OFFSETS = [0.75, 0.25, 0.75, 0.125, 0.5]; // rotational offset per sub-ring
+
+            const DOT_SUBRING_SPACING = 8; // px gap between concentric sub-rings of dots within a star
+            const DOT_RADIUS = 8; // drawn radius of each dot
+            const DOT_INNER_OFFSET = 1; // radial offset for the innermost sub-ring
+
+            // -- Ring layout: stars are arranged in concentric rings around the center --
+            const MAX_RINGS = 10; // maximum rings the slider can reach
+            const STAR_SPACING = 100; // px gap between stars along a ring
+
+            // How many stars sit in each ring (grows with circumference)
+            const STARS_PER_RING = [3, 9, 14, 20, 28, 37, 47, 58, 70, 83];
+            // Rotational offset per ring to avoid a gridded look
+            const RING_OFFSETS = [
+                0.75, 0.25, 0.75, 0.125, 0.5, 0.375, 0.625, 0.875, 0.1875,
+                0.5625,
+            ];
+
+            // Derived totals (allocated for MAX_RINGS so the buffers never need to grow)
+            const DOTS_PER_STAR = DOTS_PER_SUBRING.reduce((a, b) => a + b, 0); // 74
+            const MAX_TOTAL_STARS = STARS_PER_RING.reduce((a, b) => a + b, 0); // 369
+            const BUF_SIZE = MAX_TOTAL_STARS + 10;
+
+            const ANIM_FRAMES = 180;
+            const TWO_PI = Math.PI * 2;
+
+            // --- Utility functions ---
+
+            // Seeded PRNG (mulberry32) — deterministic randomness so the pattern is stable
+            function mulberry32(seed) {
+                return function () {
+                    let t = (seed += 0x6d2b79f5);
+                    t = Math.imul(t ^ (t >>> 15), t | 1);
+                    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+                    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+                };
+            }
+
+            function clamp(v, lo, hi) {
+                return v < lo ? lo : v > hi ? hi : v;
+            }
+            function mapVal(v, a1, b1, a2, b2) {
+                return a2 + (b2 - a2) * ((v - a1) / (b1 - a1));
+            }
+            function normVal(v, a, b) {
+                return (v - a) / (b - a);
+            }
+
+            // --- Parameters (controlled by sliders) ---
+            // rings: 0..1 maps to 1..MAX_RINGS (default → 4)
+            const LCH_DARK = { lightness: 0.72, chroma: 0.78, hue: 24 / 360 };
+            const LCH_LIGHT = { lightness: 0.8, chroma: 0.79, hue: 42 / 360 };
+            const systemLight = window.matchMedia(
+                "(prefers-color-scheme: light)",
+            ).matches;
+            const params = {
+                arcMin: 0,
+                arcMax: 0,
+                decay: 0,
+                speed: 0.3,
+                density: 0.3,
+                spread: 0.52,
+                rings: 7 / 9,
+                ...(systemLight ? LCH_LIGHT : LCH_DARK),
+                light: systemLight,
+            };
+            if (systemLight)
+                document.documentElement.setAttribute("data-theme", "light");
+            const sliderUpdaters = {}; // keyed by param name, set during slider setup
+
+            // --- Animation state ---
+            // Pre-computed random values, seeded so every load looks the same.
+            const rng = mulberry32(42);
+            const ringRand = new Float32Array(MAX_RINGS); // one random value per ring (shared by all stars in a ring)
+            const starRand = new Float32Array(BUF_SIZE); // one random value per star
+            const totalDotSlots = BUF_SIZE * DOTS_PER_STAR;
+            const dotRand = new Float32Array(totalDotSlots); // one random value per dot
+            const dotBrightness = new Float32Array(totalDotSlots); // retained brightness per dot (for decay trails)
+            for (let i = 0; i < MAX_RINGS; i++) ringRand[i] = rng();
+            for (let i = 0; i < BUF_SIZE; i++) starRand[i] = rng();
+            for (let i = 0; i < totalDotSlots; i++) dotRand[i] = rng();
+            let time = 0;
+
+            // --- Canvas setup ---
+            const wrap = document.getElementById("canvas-wrap");
+            const canvas = document.getElementById("c");
+            const ctx = canvas.getContext("2d");
+
+            function resize() {
+                const dpr = window.devicePixelRatio || 1;
+                const w = wrap.clientWidth;
+                const h = wrap.clientHeight;
+                canvas.width = w * dpr;
+                canvas.height = h * dpr;
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            }
+            resize();
+            window.addEventListener("resize", resize);
+
+            // --- Draw a single star (cluster of dots) ---
+            // effectiveArc: 0..1 fraction of each sub-ring arc that's visible (computed per-star by radial wave)
+            function drawStar(
+                x,
+                y,
+                starIndex,
+                progress,
+                scale,
+                p,
+                effectiveArc,
+            ) {
+                const arcFrac = effectiveArc; // fraction of each sub-ring arc that's visible
+                const threshScale = mapVal(p.density, 0, 1, 6, 0); // wave activation threshold (lower = more dots)
+                const decaySpeed = mapVal(p.decay, 0, 1, 0.2, 15); // how fast dots fade out
+
+                // Sine wave drives dot activation across the star's cycle
+                const wave = normVal(Math.sin(progress * TWO_PI), -1, 1);
+                const baseThresh = mapVal(
+                    wave,
+                    0,
+                    1,
+                    0,
+                    threshScale + starRand[starIndex % starRand.length] * 2,
+                );
+
+                const subringGap = DOT_SUBRING_SPACING * scale;
+                const innerOffset = DOT_INNER_OFFSET * scale;
+                const dotHalfR = (DOT_RADIUS * scale) / 2;
+
+                // Walk through each sub-ring of dots within this star
+                let di = starIndex * DOTS_PER_STAR; // dot index into the flat random/brightness arrays
+                for (let sri = 0; sri < DOTS_PER_SUBRING.length; sri++) {
+                    const dotsInSubring = DOTS_PER_SUBRING[sri];
+                    if (di + dotsInSubring > dotRand.length) break;
+
+                    // Each sub-ring has its own wave frequency and phase offset
+                    const freq =
+                        Math.floor(Math.max(dotRand[di] * 4 - 2, 0)) + 1;
+                    const localOffset =
+                        (progress * freq + Math.abs(dotRand[di] / 1.5)) % 1;
+                    // Weighting: inner sub-rings are brighter (ringWeight goes 1 → 0)
+                    const ringWeight = mapVal(
+                        sri,
+                        0,
+                        DOTS_PER_SUBRING.length - 1,
+                        1,
+                        0,
+                    );
+
+                    // Place each dot around the sub-ring
+                    for (let j = 0; j < dotsInSubring; j++) {
+                        const theta =
+                            (TWO_PI / dotsInSubring) * j +
+                            SUBRING_OFFSETS[sri] * TWO_PI;
+                        const rad = subringGap * (sri + 0.5) + innerOffset;
+                        const dotX = rad * Math.cos(theta) + x;
+                        const dotY = rad * Math.sin(theta) + y;
+
+                        // --- Arc culling: only draw dots within the visible arc ---
+                        const waveAngle = (localOffset * TWO_PI) % TWO_PI;
+                        const dotAngle = ((theta % TWO_PI) + TWO_PI) % TWO_PI;
+                        let angleDiff = Math.abs(dotAngle - waveAngle);
+                        if (angleDiff > Math.PI) angleDiff = TWO_PI - angleDiff;
+
+                        if (angleDiff > arcFrac * Math.PI) {
+                            // Outside the visible arc — just decay the dot's stored brightness
+                            dotBrightness[di] = clamp(
+                                dotBrightness[di] - decaySpeed,
+                                0,
+                                100,
+                            );
+                            di++;
+                            continue;
+                        }
+
+                        // --- Dot activation (wave-based) ---
+                        const rp = normVal(
+                            Math.sin(
+                                theta +
+                                    (localOffset + dotRand[di] * TWO_PI) *
+                                        TWO_PI *
+                                        2,
+                            ),
+                            -1,
+                            1,
+                        );
+                        const amp = Math.abs(dotRand[di] * rp * rp);
+                        const brightness_wave =
+                            mapVal(
+                                Math.sin(theta + localOffset * TWO_PI),
+                                -1,
+                                1,
+                                0,
+                                2 - dotRand[di] + ringWeight / 2,
+                            ) + amp;
+                        const vel = Math.cos(theta + localOffset * TWO_PI);
+
+                        let br = dotBrightness[di] || 0;
+                        if (brightness_wave > baseThresh && vel >= 0) {
+                            br = Math.ceil(
+                                100 - dotRand[di] * 10 + ringWeight * 20,
+                            );
+                        } else if (brightness_wave > baseThresh && vel < 0) {
+                            br = Math.floor(100 + 20 * vel);
+                        } else {
+                            br = clamp(
+                                br - Math.ceil(decaySpeed / (ringWeight + 1)),
+                                0,
+                                50,
+                            );
+                        }
+                        if (br < 0) br = 0;
+                        dotBrightness[di] = br;
+
+                        // --- Final brightness (quantized to steps of 10) ---
+                        const finalB = Math.floor(br / 10) * 10;
+
+                        // --- Draw the dot (oklch with alpha) ---
+                        if (finalB > 0.5) {
+                            const bN = finalB / 100;
+                            const L = p.lightness;
+                            const C = p.chroma * 0.37;
+                            const H =
+                                p.hue * 360 +
+                                dotRand[di] * 55 +
+                                finalB * 0.25 -
+                                40;
+                            ctx.fillStyle = `oklch(${L.toFixed(2)} ${C.toFixed(3)} ${H.toFixed(1)} / ${bN.toFixed(2)})`;
+                            ctx.beginPath();
+                            ctx.arc(dotX, dotY, dotHalfR, 0, TWO_PI);
+                            ctx.fill();
+                        }
+                        di++;
+                    }
+                }
+            }
+
+            // --- Main animation loop ---
+            let prevT = performance.now();
+            function frame(now) {
+                const dt = (now - prevT) / 1000;
+                prevT = now;
+                time += dt * mapVal(params.speed, 0, 1, 0.15, 3);
+
+                const dpr = window.devicePixelRatio || 1;
+                const w = canvas.width / dpr,
+                    h = canvas.height / dpr;
+                const scale = (Math.min(w, h) / 900) * (w < 600 ? 1.75 : 1);
+                ctx.clearRect(0, 0, w, h);
+
+                const cycleSec = ANIM_FRAMES / 60; // seconds per animation cycle at base speed
+                const cycleProgress = (time / cycleSec) % 1;
+                const cx = w / 2,
+                    cy = h / 2;
+
+                // Current ring count from the slider (1..MAX_RINGS)
+                const activeRings = Math.round(
+                    mapVal(params.rings, 0, 1, 1, MAX_RINGS),
+                );
+
+                // Star spacing along each ring, affected by the "spread" slider
+                const starGap =
+                    STAR_SPACING *
+                    scale *
+                    mapVal(params.spread, 0, 1, 0.4, 1.6);
+
+                const maxRingRadius =
+                    starGap * (activeRings - 1 + 0.5) + starGap / 4;
+
+                // Arc wave: a sine wave radiating outward from center, synced to animation cycle.
+                // Each star's visible arc oscillates between arcMin and arcMax, with inner stars
+                // leading and outer stars lagging — creating a breathing/pulsing radial effect.
+                const arcWavePhase = (time / cycleSec) * TWO_PI;
+
+                // Walk through each ring, then each star in that ring
+                let starIndex = 0;
+                for (let ri = 0; ri < activeRings; ri++) {
+                    const starsInRing = STARS_PER_RING[ri];
+                    for (let j = 0; j < starsInRing; j++) {
+                        // Place this star around the ring
+                        const theta =
+                            (TWO_PI / starsInRing) * j +
+                            RING_OFFSETS[ri] * TWO_PI;
+                        const ringRadius = starGap * (ri + 0.5) + starGap / 4;
+                        const starX = ringRadius * Math.cos(theta) + cx;
+                        const starY = ringRadius * Math.sin(theta) + cy;
+
+                        // Radial arc wave: stars closer to center lead, outer stars lag
+                        const distNorm =
+                            maxRingRadius > 0 ? ringRadius / maxRingRadius : 0;
+                        const arcWave =
+                            (Math.sin(arcWavePhase - distNorm * TWO_PI) + 1) /
+                            2; // 0..1
+                        const effectiveArc =
+                            params.arcMin +
+                            (params.arcMax - params.arcMin) * arcWave;
+
+                        // All stars in a ring share the same random phase offset (ringRand),
+                        // so the wave front sweeps coherently around each ring (the "rotating" look).
+                        // Integer division on the ring term matches the original Processing sketch.
+                        const starProgress =
+                            (cycleProgress +
+                                normVal(theta, 0, TWO_PI) +
+                                ringRand[ri] +
+                                Math.floor((ri * 2) / activeRings)) %
+                            1;
+
+                        drawStar(
+                            starX,
+                            starY,
+                            starIndex,
+                            starProgress,
+                            scale,
+                            params,
+                            effectiveArc,
+                        );
+                        starIndex++;
+                    }
+                }
+                requestAnimationFrame(frame);
+            }
+            requestAnimationFrame(frame);
+
+            // --- Controls UI ---
+            function updateAccent() {
+                const c = Math.max(params.chroma * 0.37, 0.05);
+                document.documentElement.style.setProperty(
+                    "--accent",
+                    `oklch(${params.lightness.toFixed(2)} ${c.toFixed(3)} ${params.hue * 360})`,
+                );
+            }
+
+            const SLIDERS = [
+                {
+                    key: "rings",
+                    label: "Rings",
+                    display: (v) => Math.round(mapVal(v, 0, 1, 1, MAX_RINGS)),
+                },
+                { key: "arcMin", label: "Dot Arc Min" },
+                { key: "arcMax", label: "Dot Arc Max" },
+                { key: "decay", label: "Dot Decay" },
+                { key: "density", label: "Dot Density" },
+                { key: "speed", label: "Speed" },
+                { key: "spread", label: "Star Spread" },
+                {
+                    key: "lightness",
+                    label: "Lightness",
+                    onChange: updateAccent,
+                },
+                { key: "chroma", label: "Chroma", onChange: updateAccent },
+                {
+                    key: "hue",
+                    label: "Hue",
+                    display: (v) => Math.round(v * 360),
+                    onChange: updateAccent,
+                },
+            ];
+
+            const panel = document.getElementById("panel");
+            const toggleBtn = document.getElementById("toggle-btn");
+            let panelOpen = false;
+
+            toggleBtn.addEventListener("click", () => {
+                panelOpen = !panelOpen;
+                panel.classList.toggle("open", panelOpen);
+                toggleBtn.textContent = panelOpen ? "Hide" : "Controls";
+            });
+
+            SLIDERS.forEach(({ key, label, display, onChange }) => {
+                const row = document.createElement("div");
+                row.className = "slider-row";
+
+                const lbl = document.createElement("span");
+                lbl.className = "slider-label";
+                lbl.textContent = label;
+
+                const track = document.createElement("div");
+                track.className = "slider-track";
+                track.setAttribute("role", "slider");
+                track.setAttribute("aria-label", label);
+                track.setAttribute("aria-valuemin", "0");
+                track.setAttribute("aria-valuemax", "100");
+
+                const bg = document.createElement("div");
+                bg.className = "slider-bg";
+                const fill = document.createElement("div");
+                fill.className = "slider-fill";
+                const thumb = document.createElement("div");
+                thumb.className = "slider-thumb";
+
+                track.append(bg, fill, thumb);
+
+                const valSpan = document.createElement("span");
+                valSpan.className = "slider-val";
+
+                function updateVisual(v) {
+                    const pct = v * 100;
+                    fill.style.width = pct + "%";
+                    thumb.style.left = pct + "%";
+                    const displayVal = display ? display(v) : Math.round(pct);
+                    valSpan.textContent = displayVal;
+                    track.setAttribute("aria-valuenow", String(displayVal));
+                }
+                updateVisual(params[key]);
+                sliderUpdaters[key] = updateVisual;
+
+                let dragging = false;
+                function setFromX(clientX) {
+                    const r = track.getBoundingClientRect();
+                    const v = Math.max(
+                        0,
+                        Math.min(1, (clientX - r.left) / r.width),
+                    );
+                    params[key] = v;
+                    updateVisual(v);
+                    if (onChange) onChange();
+                }
+
+                track.addEventListener("pointerdown", (e) => {
+                    dragging = true;
+                    track.setPointerCapture(e.pointerId);
+                    setFromX(e.clientX);
+                });
+                track.addEventListener("pointermove", (e) => {
+                    if (dragging) setFromX(e.clientX);
+                });
+                track.addEventListener("pointerup", () => {
+                    dragging = false;
+                });
+                track.addEventListener("pointercancel", () => {
+                    dragging = false;
+                });
+
+                row.append(lbl, track, valSpan);
+                panel.appendChild(row);
+            });
+
+            // --- Background toggle ---
+            const bgRow = document.createElement("div");
+            bgRow.className = "slider-row";
+            const bgLabel = document.createElement("span");
+            bgLabel.className = "slider-label";
+            bgLabel.textContent = "Background";
+            const bgBtn = document.createElement("button");
+            bgBtn.className = "bg-toggle";
+            bgBtn.textContent = params.light ? "Light" : "Dark";
+            function applyTheme() {
+                const root = document.documentElement;
+                if (params.light) root.setAttribute("data-theme", "light");
+                else root.removeAttribute("data-theme");
+                bgBtn.textContent = params.light ? "Light" : "Dark";
+                root.style.setProperty("--bg", params.light ? "#fff" : "#000");
+                root.style.setProperty(
+                    "--fg",
+                    params.light
+                        ? "oklch(0 0 0)"
+                        : "oklch(0.948 0.004 106.475)",
+                );
+                root.style.setProperty(
+                    "--container-bg",
+                    params.light
+                        ? "oklch(0.948 0.004 106.475)"
+                        : "oklch(0.193 0.005 67.517)",
+                );
+                root.style.setProperty(
+                    "--tag-bg",
+                    params.light ? "#fff" : "oklch(0.241 0.008 4.059)",
+                );
+                document
+                    .querySelectorAll('meta[name="theme-color"]')
+                    .forEach(
+                        (m) =>
+                            (m.content = params.light ? "#f7f6f2" : "#302a25"),
+                    );
+                const preset = params.light ? LCH_LIGHT : LCH_DARK;
+                for (const k in preset) {
+                    params[k] = preset[k];
+                    if (sliderUpdaters[k]) sliderUpdaters[k](params[k]);
+                }
+                updateAccent();
+            }
+            bgBtn.addEventListener("click", () => {
+                params.light = !params.light;
+                applyTheme();
+            });
+            bgRow.append(bgLabel, bgBtn);
+            panel.appendChild(bgRow);
+
+            // --- Theme toggle button (sun/moon) ---
+            document
+                .getElementById("theme-toggle")
+                .addEventListener("click", () => {
+                    params.light = !params.light;
+                    applyTheme();
+                });
+
+            // --- Set --accent from initial params ---
+            updateAccent();
+
+            // --- Intro animation: ease arcMin & arcMax from 0 to target ---
+            function startIntroBloom() {
+                const targets = { arcMin: 0.1, arcMax: 0.95 };
+                const duration = 5000; // ms
+                const start = performance.now();
+                function ease(t) {
+                    return t < 0.5
+                        ? 2 * t * t
+                        : 1 - Math.pow(-2 * t + 2, 2) / 2;
+                } // easeInOutQuad
+                function tick(now) {
+                    const t = Math.min((now - start) / duration, 1);
+                    const e = ease(t);
+                    for (const key in targets) {
+                        params[key] = targets[key] * e;
+                        if (sliderUpdaters[key])
+                            sliderUpdaters[key](params[key]);
+                    }
+                    if (t < 1) requestAnimationFrame(tick);
+                    else oscillateArcMin();
+                }
+                requestAnimationFrame(tick);
+            }
+
+            // --- Oscillate arcMin between 10 and 80 over 5s ---
+            function oscillateArcMin() {
+                const lo = 0.1,
+                    hi = 0.8;
+                const mid = (lo + hi) / 2,
+                    amp = (hi - lo) / 2;
+                const period = 10000;
+                const origin = performance.now();
+                function wave(now) {
+                    const v =
+                        mid -
+                        amp * Math.cos((TWO_PI * (now - origin)) / period);
+                    params.arcMin = v;
+                    if (sliderUpdaters.arcMin) sliderUpdaters.arcMin(v);
+                    requestAnimationFrame(wave);
+                }
+                requestAnimationFrame(wave);
+            }
+
+            // --- Last updated (from GitHub API) ---
+            fetch(
+                "https://api.github.com/repos/juliankellydesign/juliankellydesign.github.io/commits?per_page=1&sha=main",
+            )
+                .then((r) => (r.ok ? r.json() : Promise.reject()))
+                .then(([c]) => {
+                    const d = new Date(c.commit.committer.date);
+                    const yyyy = d.getFullYear();
+                    const mm = String(d.getMonth() + 1).padStart(2, "0");
+                    const dd = String(d.getDate()).padStart(2, "0");
+                    document.getElementById("last-updated").textContent =
+                        "Updated " + yyyy + "." + mm + "." + dd;
+                })
+                .catch(() => {});
+
+            // --- LLM-style streaming text effect ---
+            (function () {
+                // Approximate syllable splitting for token simulation
+                function syllabify(word) {
+                    // Keep contractions whole (I'm, I've, don't, etc.)
+                    if (word.includes("'")) return [word];
+                    // Split email-like strings on @ and .
+                    if (/[@.]/.test(word)) {
+                        return word
+                            .split(/([@.])/)
+                            .filter(Boolean)
+                            .flatMap(
+                                (part) =>
+                                    part.match(
+                                        /[^aeiouy]*[aeiouy]+[^aeiouy]*/gi,
+                                    ) || [part],
+                            );
+                    }
+                    return (
+                        word.match(/[^aeiouy]*[aeiouy]+[^aeiouy]*/gi) || [word]
+                    );
+                }
+
+                function tokenize(text) {
+                    if (!text) return [];
+                    const parts = text.split(/( +)/);
+                    const tokens = [];
+                    for (const p of parts) {
+                        if (!p) continue;
+                        if (/^ +$/.test(p)) tokens.push(p);
+                        else tokens.push(...syllabify(p));
+                    }
+                    return tokens;
+                }
+
+                function getTextNodes(el) {
+                    const nodes = [];
+                    const walker = document.createTreeWalker(
+                        el,
+                        NodeFilter.SHOW_TEXT,
+                    );
+                    while (walker.nextNode()) {
+                        if (walker.currentNode.textContent.trim())
+                            nodes.push(walker.currentNode);
+                    }
+                    return nodes;
+                }
+
+                // Collect tags in stream order: top-left, then bottom bio (excluding .fade)
+                const topTags = [
+                    ...document.querySelectorAll(
+                        ".content-top-left .tag:not(.fade)",
+                    ),
+                ];
+                const bottomTags = [
+                    ...document.querySelectorAll(
+                        ".content-left > .tag:not(.fade)",
+                    ),
+                ];
+                const allTags = [...topTags, ...bottomTags];
+
+                // Build a flat queue of tokens across all tags
+                const queue = [];
+                for (const tag of allTags) {
+                    const textNodes = getTextNodes(tag);
+                    const nodeData = textNodes.map((n) => ({
+                        node: n,
+                        tokens: tokenize(n.textContent),
+                    }));
+                    // Clear all text content
+                    nodeData.forEach((nd) => {
+                        nd.node.textContent = "";
+                    });
+
+                    let isFirst = true;
+                    for (const nd of nodeData) {
+                        for (const token of nd.tokens) {
+                            queue.push({
+                                tag,
+                                node: nd.node,
+                                token,
+                                isFirstInTag: isFirst,
+                            });
+                            isFirst = false;
+                        }
+                    }
+                }
+
+                // Stream tokens with LLM-like timing
+                let qi = 0;
+                const BASE_DELAY = 35;
+                const TAG_PAUSE = 120;
+
+                function next() {
+                    if (qi >= queue.length) {
+                        revealAfterStream();
+                        startIntroBloom();
+                        return;
+                    }
+
+                    const entry = queue[qi];
+
+                    // Show tag when its first token arrives
+                    if (entry.isFirstInTag) {
+                        entry.tag.classList.remove("stream-hide");
+                    }
+
+                    entry.node.textContent += entry.token;
+                    qi++;
+
+                    // Add extra delay between tags for a natural "thinking" pause
+                    const isNewTag =
+                        qi < queue.length && queue[qi].isFirstInTag;
+                    setTimeout(
+                        next,
+                        BASE_DELAY +
+                            Math.random() * 25 +
+                            (isNewTag ? TAG_PAUSE : 0),
+                    );
+                }
+
+                setTimeout(next, 400);
+            })();
+        </script>
+    </body>
 </html>
