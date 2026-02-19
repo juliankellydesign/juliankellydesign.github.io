@@ -36,8 +36,10 @@
                 --accent: oklch(0.7 0.337 28);
                 --container-bg: oklch(0.193 0.005 67.517);
                 --tag-bg: oklch(0.3 0.008 4.059);
+                --tag-bg-muted: color-mix(in oklch, var(--tag-bg), transparent 40%);
                 --border: color-mix(in oklch, var(--fg), transparent 75%);
                 --muted: color-mix(in oklch, var(--fg), transparent 40%);
+                --border-shadow: rgb(255, 255, 255, 0.12);
             }
             @media (prefers-color-scheme: light) {
                 :root {
@@ -46,8 +48,10 @@
                     --accent: oklch(0.7 0.307 78);
                     --container-bg: oklch(0.948 0.004 106.475);
                     --tag-bg: #fff;
+                    --tag-bg-muted: color-mix(in oklch, var(var(--tag-bg)), transparent 40%);
                     --border: color-mix(in oklch, var(--fg), transparent 75%);
                     --muted: color-mix(in oklch, var(--fg), transparent 40%);
+                    --border-shadow: rgba(0,0,0,0.12);
                 }
             }
             @font-face {
@@ -116,6 +120,12 @@
                 user-select: none;
                 pointer-events: none;
                 z-index: 500;
+                mix-blend-mode: lighten;
+            }
+            @media (prefers-color-scheme: light) {
+                canvas {
+                    mix-blend-mode: darken;
+                }
             }
 
             /* Content overlay */
@@ -177,8 +187,11 @@
                 background: var(--tag-bg);
                 color: var(--fg);
                 font-weight: 500;
-                box-shadow: 0 0 8px
-                    color-mix(in oklch, var(--tag-bg), transparent 50%);
+                border-radius: 4px;
+                border: 0.5px solid var(--border-shadow);
+
+                /* Tag Shadow */
+                box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.08);
             }
 
             .tag.accent {
@@ -261,7 +274,7 @@
             }
 
             .social-icons span {
-                background: color-mix(in oklch, var(--tag-bg), transparent 50%);
+                background: var(--tag-bg-muted);
                 font-weight: 400;
             }
 
@@ -916,7 +929,7 @@
                 const dpr = window.devicePixelRatio || 1;
                 const w = canvas.width / dpr,
                     h = canvas.height / dpr;
-                const scale = (Math.min(w, h) / 900) * (w < 600 ? 1.75 : 1.5);
+                const scale = (Math.min(w, h) / 900) * (w < 600 ? 1.75 : 1.25);
                 ctx.clearRect(0, 0, w, h);
 
                 const cycleSec = ANIM_FRAMES / 60; // seconds per animation cycle at base speed
