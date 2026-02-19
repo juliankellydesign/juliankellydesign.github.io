@@ -35,7 +35,7 @@
                 --fg: oklch(0.948 0.004 106.475);
                 --accent: oklch(0.7 0.337 28);
                 --container-bg: oklch(0.193 0.005 67.517);
-                --tag-bg: oklch(0.3 0.008 4.059);
+                --tag-bg: oklch(0.4 0.008 4.059);
                 --tag-bg-muted: color-mix(in oklch, var(--tag-bg), transparent 40%);
                 --border: color-mix(in oklch, var(--fg), transparent 75%);
                 --muted: color-mix(in oklch, var(--fg), transparent 40%);
@@ -122,6 +122,7 @@
                 z-index: 500;
                 mix-blend-mode: lighten;
             }
+
             @media (prefers-color-scheme: light) {
                 canvas {
                     mix-blend-mode: darken;
@@ -259,18 +260,18 @@
             .social-icons {
                 display: flex;
                 gap: 12px;
+                transition: background 0.2s, fill 0.2s, color 0.2s;
             }
             .social-icons a {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                color: var(--fg);
-                transition: color 0.4s;
+                color: var(--muted);
             }
             .social-icons svg {
                 width: 20px;
                 height: 20px;
-                fill: color-mix(in oklch, var(--fg), transparent 50%);
+                fill: var(--muted);
             }
 
             .social-icons span {
@@ -284,6 +285,12 @@
 
             .social-icons span:hover {
                 background-color: var(--tag-bg);
+            }
+            .social-icons span:hover a {
+                color: var(--fg);
+            }
+            .social-icons span:hover svg {
+                fill: var(--fg);
             }
 
             .social-icons span a {
@@ -1186,6 +1193,7 @@
                         (m) =>
                             (m.content = params.light ? "#f7f6f2" : "#302a25"),
                     );
+                canvas.style.mixBlendMode = params.light ? "darken" : "lighten";
                 const preset = params.light ? LCH_LIGHT : LCH_DARK;
                 for (const k in preset) {
                     params[k] = preset[k];
@@ -1268,6 +1276,13 @@
                         "Updated " + yyyy + "." + mm + "." + dd;
                 })
                 .catch(() => {});
+
+            // --- Skip intro on click ---
+            let introFinished = false;
+            function finishIntro() {
+                if (introFinished) return;
+                introFinished = true;
+            }
 
             // --- LLM-style streaming text effect ---
             (function () {
@@ -1362,10 +1377,39 @@
                 const BASE_DELAY = 35;
                 const TAG_PAUSE = 120;
 
+                function flushAll() {
+                    while (qi < queue.length) {
+                        const entry = queue[qi];
+                        if (entry.isFirstInTag) {
+                            entry.tag.classList.remove("stream-hide");
+                        }
+                        entry.node.textContent += entry.token;
+                        qi++;
+                    }
+                    revealAfterStream();
+                    finishIntro();
+                    // Jump arc values to targets and start oscillation
+                    params.arcMin = 0.1;
+                    params.arcMax = 0.95;
+                    if (sliderUpdaters.arcMin) sliderUpdaters.arcMin(0.1);
+                    if (sliderUpdaters.arcMax) sliderUpdaters.arcMax(0.95);
+                    oscillateArcMin();
+                }
+
+                // Click anywhere to skip intro
+                wrap.addEventListener("click", function skipHandler() {
+                    if (introFinished) return;
+                    flushAll();
+                    wrap.removeEventListener("click", skipHandler);
+                });
+
                 function next() {
-                    if (qi >= queue.length) {
-                        revealAfterStream();
-                        startIntroBloom();
+                    if (introFinished || qi >= queue.length) {
+                        if (!introFinished) {
+                            revealAfterStream();
+                            startIntroBloom();
+                            finishIntro();
+                        }
                         return;
                     }
 
