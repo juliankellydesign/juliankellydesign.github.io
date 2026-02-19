@@ -44,9 +44,11 @@
                 --accent: oklch(0.7 0.337 28);
                 --container-bg: oklch(0.193 0.005 67.517);
                 --tag-bg: oklch(0.241 0.008 4.059);
-                --tag-bg-muted: color-mix(in oklch, var(--tag-bg), transparent 40%);
+                --tag-bg-muted: color-mix(in oklch, var(--tag-bg), transparent 80%);
                 --border: color-mix(in oklch, var(--fg), transparent 75%);
+                --border-accent: color-mix(in oklch, var(--accent), transparent 75%);
                 --muted: color-mix(in oklch, var(--fg), transparent 40%);
+                --muted-accent: color-mix(in oklch, var(--accent), transparent 40%);
                 --border-shadow: rgb(255, 255, 255, 0.12);
             }
             @media (prefers-color-scheme: light) {
@@ -56,9 +58,11 @@
                     --accent: oklch(0.7 0.307 78);
                     --container-bg: oklch(0.948 0.004 106.475);
                     --tag-bg: #fff;
-                    --tag-bg-muted: color-mix(in oklch, var(--tag-bg), transparent 40%);
+                    --tag-bg-muted: color-mix(in oklch, var(--tag-bg), transparent 80%);
                     --border: color-mix(in oklch, var(--fg), transparent 75%);
+                    --border-accent: color-mix(in oklch, var(--accent), transparent 75%);
                     --muted: color-mix(in oklch, var(--fg), transparent 40%);
+                    --muted-accent: color-mix(in oklch, var(--accent), transparent 40%);
                     --border-shadow: rgba(0,0,0,0.12);
                 }
             }
@@ -133,13 +137,7 @@
                 user-select: none;
                 pointer-events: none;
                 z-index: 500;
-                mix-blend-mode: lighten;
-            }
-
-            @media (prefers-color-scheme: light) {
-                canvas {
-                    mix-blend-mode: darken;
-                }
+                mix-blend-mode: normal;
             }
 
             /* Content overlay */
@@ -289,6 +287,7 @@
                 align-items: center;
                 justify-content: center;
                 color: var(--muted);
+                transition: background 0.2s, fill 0.2s, color 0.2s;
             }
             .social-icons svg {
                 width: 20px;
@@ -694,7 +693,7 @@
             <div id="status-bar">
                 <div id="status-bar-left">
                     <div id="status-bar-logo"><svg viewBox="0 0 960 1520" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M300 320C311.046 320 320 328.954 320 340V540C320 551.046 311.046 560 300 560H20C8.95431 560 0 551.046 0 540V340C0 328.954 8.95431 320 20 320H300Z"/><path d="M300 640C311.046 640 320 648.954 320 660V860C320 871.046 311.046 880 300 880H20C8.95431 880 0 871.046 0 860V660C0 648.954 8.95431 640 20 640H300Z"/><path d="M300 960C311.046 960 320 968.954 320 980V1180C320 1191.05 311.046 1200 300 1200H20C8.95431 1200 0 1191.05 0 1180V980C0 968.954 8.95431 960 20 960H300Z"/><path d="M780 1280C791.046 1280 800 1288.95 800 1300V1500C800 1511.05 791.046 1520 780 1520H180C168.954 1520 160 1511.05 160 1500V1300C160 1288.95 168.954 1280 180 1280H780Z"/><path d="M940 960C951.046 960 960 968.954 960 980V1180C960 1191.05 951.046 1200 940 1200H660C648.954 1200 640 1191.05 640 1180V980C640 968.954 648.954 960 660 960H940Z"/><path d="M940 0C951.046 0 960 8.95431 960 20V220C960 231.046 951.046 240 940 240H180C168.954 240 160 231.046 160 220V20C160 8.9543 168.954 0 180 0H940Z"/><path d="M940 320C951.046 320 960 328.954 960 340V540C960 551.046 951.046 560 940 560H660C648.954 560 640 551.046 640 540V340C640 328.954 648.954 320 660 320H940Z"/></svg></div>
-                    <span id="city-tag">Sarajevo</span>
+                    <span id="city-tag">Amarillo</span>
                 </div>
                 <span id="last-updated"></span>
             </div>
@@ -788,6 +787,28 @@
                 return (v - a) / (b - a);
             }
 
+            // --- Theme colors (single source of truth) ---
+            const THEME = {
+                dark: {
+                    bg: "#000",
+                    fg: "oklch(0.948 0.004 106.475)",
+                    accent: "oklch(0.7 0.337 28)",
+                    containerBg: "oklch(0.193 0.005 67.517)",
+                    tagBg: "oklch(0.241 0.008 4.059)",
+                    borderShadow: "rgb(255, 255, 255, 0.12)",
+                    themeColor: "#302a25",
+                },
+                light: {
+                    bg: "#fff",
+                    fg: "oklch(0 0 0)",
+                    accent: "oklch(0.7 0.307 78)",
+                    containerBg: "oklch(0.948 0.004 106.475)",
+                    tagBg: "#fff",
+                    borderShadow: "rgba(0,0,0,0.12)",
+                    themeColor: "#f7f6f2",
+                },
+            };
+
             // --- Parameters (controlled by sliders) ---
             // rings: 0..1 maps to 1..MAX_RINGS (default → 4)
             const LCH_LIGHT = { lightness: 0.8, chroma: 0.79, hue: 42 / 360 };
@@ -805,10 +826,10 @@
             const params = {
                 arcMin: 0,
                 arcMax: 0,
-                decay: 0,
+                decay: 0.05,
                 speed: 0.3,
-                density: 0,
-                spread: 0.40,
+                density: 0.1,
+                spread: 0.45,
                 rings: 7 / 9,
                 ...(systemLight ? LCH_LIGHT : LCH_DARK),
                 light: systemLight,
@@ -1046,9 +1067,10 @@
                         const arcWave =
                             (Math.sin(arcWavePhase - distNorm * TWO_PI) + 1) /
                             2; // 0..1
+                        const clampedArcMin = Math.min(params.arcMin, params.arcMax);
                         const effectiveArc =
-                            params.arcMin +
-                            (params.arcMax - params.arcMin) * arcWave;
+                            clampedArcMin +
+                            (params.arcMax - clampedArcMin) * arcWave;
 
                         // All stars in a ring share the same random phase offset (ringRand),
                         // so the wave front sweeps coherently around each ring (the "rotating" look).
@@ -1076,7 +1098,7 @@
                 // Update --accent to follow the hue wave (use center ring's hue)
                 const accentHuePhase = (TWO_PI * now) / HUE_WAVE_PERIOD;
                 const accentHue = params.hue * 360 + (HUE_WAVE_RANGE / 2) * (1 - Math.cos(accentHuePhase));
-                const accentC = Math.max(params.chroma * 0.37, 0.05);
+                const accentC = Math.max(params.chroma * 0.25, 0.05);
                 document.documentElement.style.setProperty(
                     "--accent",
                     `oklch(${params.lightness.toFixed(2)} ${accentC.toFixed(3)} ${accentHue.toFixed(1)})`,
@@ -1088,7 +1110,7 @@
 
             // --- Controls UI ---
             function updateAccent() {
-                const c = Math.max(params.chroma * 0.37, 0.05);
+                const c = Math.max(params.chroma * 0.25, 0.05);
                 document.documentElement.style.setProperty(
                     "--accent",
                     `oklch(${params.lightness.toFixed(2)} ${c.toFixed(3)} ${params.hue * 360})`,
@@ -1225,33 +1247,18 @@
             bgBtn.textContent = params.light ? "Light" : "Dark";
             function applyTheme() {
                 const root = document.documentElement;
+                const t = params.light ? THEME.light : THEME.dark;
                 if (params.light) root.setAttribute("data-theme", "light");
                 else root.removeAttribute("data-theme");
                 bgBtn.textContent = params.light ? "Light" : "Dark";
-                root.style.setProperty("--bg", params.light ? "#fff" : "#000");
-                root.style.setProperty(
-                    "--fg",
-                    params.light
-                        ? "oklch(0 0 0)"
-                        : "oklch(0.948 0.004 106.475)",
-                );
-                root.style.setProperty(
-                    "--container-bg",
-                    params.light
-                        ? "oklch(0.948 0.004 106.475)"
-                        : "oklch(0.193 0.005 67.517)",
-                );
-                root.style.setProperty(
-                    "--tag-bg",
-                    params.light ? "#fff" : "oklch(0.241 0.008 4.059)",
-                );
+                root.style.setProperty("--bg", t.bg);
+                root.style.setProperty("--fg", t.fg);
+                root.style.setProperty("--container-bg", t.containerBg);
+                root.style.setProperty("--tag-bg", t.tagBg);
+                root.style.setProperty("--border-shadow", t.borderShadow);
                 document
                     .querySelectorAll('meta[name="theme-color"]')
-                    .forEach(
-                        (m) =>
-                            (m.content = params.light ? "#f7f6f2" : "#302a25"),
-                    );
-                canvas.style.mixBlendMode = params.light ? "darken" : "lighten";
+                    .forEach((m) => (m.content = t.themeColor));
                 const preset = params.light ? LCH_LIGHT : LCH_DARK;
                 for (const k in preset) {
                     params[k] = preset[k];
@@ -1265,6 +1272,23 @@
             });
             bgRow.append(bgLabel, bgBtn);
             panel.appendChild(bgRow);
+
+            // --- Oscillation toggle ---
+            let oscillateEnabled = true;
+            const oscRow = document.createElement("div");
+            oscRow.className = "slider-row";
+            const oscLabel = document.createElement("span");
+            oscLabel.className = "slider-label";
+            oscLabel.textContent = "Oscillate";
+            const oscBtn = document.createElement("button");
+            oscBtn.className = "bg-toggle";
+            oscBtn.textContent = "On";
+            oscBtn.addEventListener("click", () => {
+                oscillateEnabled = !oscillateEnabled;
+                oscBtn.textContent = oscillateEnabled ? "On" : "Off";
+            });
+            oscRow.append(oscLabel, oscBtn);
+            panel.appendChild(oscRow);
 
             // --- Theme toggle button (sun/moon) ---
             document
@@ -1310,11 +1334,14 @@
                 const period = 10000;
                 const origin = performance.now();
                 function wave(now) {
-                    const v =
-                        mid -
-                        amp * Math.cos((TWO_PI * (now - origin)) / period);
-                    params.arcMin = v;
-                    if (sliderUpdaters.arcMin) sliderUpdaters.arcMin(v);
+                    if (oscillateEnabled) {
+                        const v = Math.min(
+                            mid - amp * Math.cos((TWO_PI * (now - origin)) / period),
+                            params.arcMax,
+                        );
+                        params.arcMin = v;
+                        if (sliderUpdaters.arcMin) sliderUpdaters.arcMin(v);
+                    }
                     requestAnimationFrame(wave);
                 }
                 requestAnimationFrame(wave);
@@ -1432,8 +1459,9 @@
 
                 // Stream tokens with LLM-like timing
                 let qi = 0;
-                const BASE_DELAY = 35;
-                const TAG_PAUSE = 120;
+                let bloomStarted = false;
+                const BASE_DELAY = 26;
+                const TAG_PAUSE = 90;
 
                 function flushAll() {
                     while (qi < queue.length) {
@@ -1465,7 +1493,10 @@
                     if (introFinished || qi >= queue.length) {
                         if (!introFinished) {
                             revealAfterStream();
-                            startIntroBloom();
+                            if (!bloomStarted) {
+                                bloomStarted = true;
+                                startIntroBloom();
+                            }
                             finishIntro();
                         }
                         return;
@@ -1481,18 +1512,24 @@
                     entry.node.textContent += entry.token;
                     qi++;
 
+                    // Start canvas bloom early, ~40% through text
+                    if (!bloomStarted && qi >= queue.length * 0.4) {
+                        bloomStarted = true;
+                        startIntroBloom();
+                    }
+
                     // Add extra delay between tags for a natural "thinking" pause
                     const isNewTag =
                         qi < queue.length && queue[qi].isFirstInTag;
                     setTimeout(
                         next,
                         BASE_DELAY +
-                            Math.random() * 25 +
+                            Math.random() * 18 +
                             (isNewTag ? TAG_PAUSE : 0),
                     );
                 }
 
-                setTimeout(next, 400);
+                setTimeout(next, 300);
             })();
         </script>
     </body>
