@@ -44,11 +44,11 @@
                 --accent: oklch(0.7 0.337 28);
                 --container-bg: oklch(0.193 0.005 67.517);
                 --tag-bg: oklch(0.241 0.008 4.059);
-                --tag-bg-muted: color-mix(in oklch, var(--tag-bg), transparent 40%);
+                --tag-bg-muted: color-mix(in oklch, var(--tag-bg), transparent 80%);
                 --border: color-mix(in oklch, var(--fg), transparent 75%);
-                --border-accent: color-mix(in oklch, var(--accent), transparent 75%);
+                --border-accent: color-mix(in oklch, var(--accent), var(--container-bg) 70%);
                 --muted: color-mix(in oklch, var(--fg), transparent 40%);
-                --muted-accent: color-mix(in oklch, var(--accent), transparent 75%);
+                --muted-accent: color-mix(in oklch, var(--accent), var(--container-bg) 50%);
                 --border-shadow: rgb(255, 255, 255, 0.12);
             }
             @media (prefers-color-scheme: light) {
@@ -58,12 +58,12 @@
                     --accent: oklch(0.7 0.307 78);
                     --container-bg: oklch(0.948 0.004 106.475);
                     --tag-bg: #fff;
-                    --tag-bg-muted: color-mix(in oklch, var(--tag-bg), transparent 40%);
+                    --tag-bg-muted: color-mix(in oklch, var(--tag-bg), transparent 80%);
                     --border: color-mix(in oklch, var(--fg), transparent 75%);
-                    --border-accent: color-mix(in oklch, var(--accent), transparent 75%);
+                    --border-accent: color-mix(in oklch, var(--accent), var(--container-bg) 70%);
                     --muted: color-mix(in oklch, var(--fg), transparent 40%);
-                    --muted-accent: color-mix(in oklch, var(--accent), transparent 75%);
-                    --border-shadow: rgba(0,0,0,0.12);
+                    --muted-accent: color-mix(in oklch, var(--accent), var(--container-bg) 50%);
+                    --border-shadow: rgba(0,0,0,0.64);
                 }
             }
             @font-face {
@@ -287,6 +287,7 @@
                 align-items: center;
                 justify-content: center;
                 color: var(--muted);
+                transition: background 0.2s, fill 0.2s, color 0.2s;
             }
             .social-icons svg {
                 width: 20px;
@@ -349,7 +350,7 @@
                 width: 24px;
                 height: 22px;
                 border-radius: 3px 0 0 3px;
-                background: var(--border);
+                background: var(--border-accent);
                 flex-shrink: 0;
                 transition: background 0.4s;
             }
@@ -366,7 +367,7 @@
                 font-size: 13px;
                 line-height: 1;
                 font-weight: 400;
-                color: var(--muted);
+                color: var(--muted-accent);
                 font-family: "Karl Mono", monospace;
                 text-transform: uppercase;
                 letter-spacing: 0.04em;
@@ -376,7 +377,7 @@
                 font-size: 13px;
                 line-height: 1;
                 font-weight: 400;
-                color: var(--muted);
+                color: var(--muted-accent);
                 font-family: "Karl Mono", monospace;
                 text-transform: uppercase;
                 letter-spacing: 0.04em;
