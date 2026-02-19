@@ -36,6 +36,8 @@
                 --accent: oklch(0.7 0.337 28);
                 --container-bg: oklch(0.193 0.005 67.517);
                 --tag-bg: oklch(0.3 0.008 4.059);
+                --border: color-mix(in oklch, var(--fg), transparent 75%);
+                --muted: color-mix(in oklch, var(--fg), transparent 40%);
             }
             @media (prefers-color-scheme: light) {
                 :root {
@@ -44,6 +46,8 @@
                     --accent: oklch(0.7 0.307 78);
                     --container-bg: oklch(0.948 0.004 106.475);
                     --tag-bg: #fff;
+                    --border: color-mix(in oklch, var(--fg), transparent 75%);
+                    --muted: color-mix(in oklch, var(--fg), transparent 40%);
                 }
             }
             @font-face {
@@ -725,8 +729,8 @@
                 arcMax: 0,
                 decay: 0,
                 speed: 0.3,
-                density: 0.3,
-                spread: 0.52,
+                density: 0.6,
+                spread: 0.40,
                 rings: 7 / 9,
                 ...(systemLight ? LCH_LIGHT : LCH_DARK),
                 light: systemLight,
@@ -912,7 +916,7 @@
                 const dpr = window.devicePixelRatio || 1;
                 const w = canvas.width / dpr,
                     h = canvas.height / dpr;
-                const scale = (Math.min(w, h) / 900) * (w < 600 ? 1.75 : 1);
+                const scale = (Math.min(w, h) / 900) * (w < 600 ? 1.75 : 1.5);
                 ctx.clearRect(0, 0, w, h);
 
                 const cycleSec = ANIM_FRAMES / 60; // seconds per animation cycle at base speed
