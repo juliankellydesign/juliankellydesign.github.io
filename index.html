@@ -714,6 +714,9 @@
                 chroma: LCH_LIGHT.chroma - 0.01,
                 hue: LCH_LIGHT.hue - 18 / 360,
             };
+            const HUE_WAVE_RANGE = 82; // degrees (124 - 42)
+            const HUE_WAVE_PERIOD = 20000; // 20s full cycle (10s up, 10s back)
+            const HUE_WAVE_LAG = Math.PI / 2; // phase lag from innermost to outermost ring
             const systemLight = window.matchMedia(
                 "(prefers-color-scheme: light)",
             ).matches;
@@ -771,6 +774,7 @@
                 scale,
                 p,
                 effectiveArc,
+                hueBase,
             ) {
                 const arcFrac = effectiveArc; // fraction of each sub-ring arc that's visible
                 const threshScale = mapVal(p.density, 0, 1, 6, 0); // wave activation threshold (lower = more dots)
@@ -884,7 +888,7 @@
                             const L = p.lightness;
                             const C = p.chroma * 0.37;
                             const H =
-                                p.hue * 360 +
+                                hueBase +
                                 dotRand[di] * 55 +
                                 finalB * 0.25 -
                                 40;
@@ -938,6 +942,12 @@
                 // Walk through each ring, then each star in that ring
                 let starIndex = 0;
                 for (let ri = 0; ri < activeRings; ri++) {
+                    // Hue wave: sweeps from base hue to +82° and back over 20s,
+                    // inner rings lead and outer rings lag behind.
+                    const ringNorm = activeRings > 1 ? ri / (activeRings - 1) : 0;
+                    const huePhase = (TWO_PI * now) / HUE_WAVE_PERIOD - ringNorm * HUE_WAVE_LAG;
+                    const ringHue = params.hue * 360 + (HUE_WAVE_RANGE / 2) * (1 - Math.cos(huePhase));
+
                     const starsInRing = STARS_PER_RING[ri];
                     for (let j = 0; j < starsInRing; j++) {
                         // Place this star around the ring
@@ -976,10 +986,20 @@
                             scale,
                             params,
                             effectiveArc,
+                            ringHue,
                         );
                         starIndex++;
                     }
                 }
+                // Update --accent to follow the hue wave (use center ring's hue)
+                const accentHuePhase = (TWO_PI * now) / HUE_WAVE_PERIOD;
+                const accentHue = params.hue * 360 + (HUE_WAVE_RANGE / 2) * (1 - Math.cos(accentHuePhase));
+                const accentC = Math.max(params.chroma * 0.37, 0.05);
+                document.documentElement.style.setProperty(
+                    "--accent",
+                    `oklch(${params.lightness.toFixed(2)} ${accentC.toFixed(3)} ${accentHue.toFixed(1)})`,
+                );
+
                 requestAnimationFrame(frame);
             }
             requestAnimationFrame(frame);
