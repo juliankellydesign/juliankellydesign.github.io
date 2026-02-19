@@ -1245,6 +1245,10 @@
                     "--tag-bg",
                     params.light ? "#fff" : "oklch(0.241 0.008 4.059)",
                 );
+                root.style.setProperty(
+                    "--border-shadow",
+                    params.light ? "rgba(0,0,0,0.12)" : "rgb(255, 255, 255, 0.12)",
+                );
                 document
                     .querySelectorAll('meta[name="theme-color"]')
                     .forEach(
@@ -1277,9 +1281,32 @@
             // --- Set --accent from initial params ---
             updateAccent();
 
+            const INTRO_ARC_TARGETS = { arcMin: 0.1, arcMax: 0.6 };
+            let introState = "streaming"; // streaming -> blooming -> complete
+            let arcOscillationStarted = false;
+            let removeIntroSkipHandler = null;
+
+            function setIntroArcTargets(arcMin, arcMax) {
+                params.arcMin = arcMin;
+                params.arcMax = arcMax;
+                if (sliderUpdaters.arcMin) sliderUpdaters.arcMin(arcMin);
+                if (sliderUpdaters.arcMax) sliderUpdaters.arcMax(arcMax);
+            }
+
+            function completeIntro() {
+                if (introState === "complete") return;
+                introState = "complete";
+                if (removeIntroSkipHandler) {
+                    removeIntroSkipHandler();
+                    removeIntroSkipHandler = null;
+                }
+            }
+
             // --- Intro animation: ease arcMin & arcMax from 0 to target ---
             function startIntroBloom() {
-                const targets = { arcMin: 0.1, arcMax: 0.6 };
+                if (introState === "complete") return;
+                introState = "blooming";
+                const targets = INTRO_ARC_TARGETS;
                 const duration = 5000; // ms
                 const start = performance.now();
                 function ease(t) {
@@ -1288,6 +1315,7 @@
                         : 1 - Math.pow(-2 * t + 2, 2) / 2;
                 } // easeInOutQuad
                 function tick(now) {
+                    if (introState !== "blooming") return;
                     const t = Math.min((now - start) / duration, 1);
                     const e = ease(t);
                     for (const key in targets) {
@@ -1296,13 +1324,18 @@
                             sliderUpdaters[key](params[key]);
                     }
                     if (t < 1) requestAnimationFrame(tick);
-                    else oscillateArcMin();
+                    else {
+                        oscillateArcMin();
+                        completeIntro();
+                    }
                 }
                 requestAnimationFrame(tick);
             }
 
-            // --- Oscillate arcMin between 10 and 80 over 5s ---
+            // --- Oscillate arcMin between 10 and 80 over 10s ---
             function oscillateArcMin() {
+                if (arcOscillationStarted) return;
+                arcOscillationStarted = true;
                 const lo = 0.1,
                     hi = 0.8;
                 const mid = (lo + hi) / 2,
@@ -1334,13 +1367,6 @@
                         "Updated " + yyyy + "." + mm + "." + dd;
                 })
                 .catch(() => {});
-
-            // --- Skip intro on click ---
-            let introFinished = false;
-            function finishIntro() {
-                if (introFinished) return;
-                introFinished = true;
-            }
 
             // --- LLM-style streaming text effect ---
             (function () {
@@ -1445,29 +1471,29 @@
                         qi++;
                     }
                     revealAfterStream();
-                    finishIntro();
-                    // Jump arc values to targets and start oscillation
-                    params.arcMin = 0.1;
-                    params.arcMax = 0.6;
-                    if (sliderUpdaters.arcMin) sliderUpdaters.arcMin(0.1);
-                    if (sliderUpdaters.arcMax) sliderUpdaters.arcMax(0.6);
+                    // Jump arc values to targets and start oscillation.
+                    setIntroArcTargets(
+                        INTRO_ARC_TARGETS.arcMin,
+                        INTRO_ARC_TARGETS.arcMax,
+                    );
                     oscillateArcMin();
+                    completeIntro();
                 }
 
                 // Click anywhere to skip intro
-                wrap.addEventListener("click", function skipHandler() {
-                    if (introFinished) return;
+                function skipHandler() {
+                    if (introState === "complete") return;
                     flushAll();
+                }
+                wrap.addEventListener("click", skipHandler);
+                removeIntroSkipHandler = () =>
                     wrap.removeEventListener("click", skipHandler);
-                });
 
                 function next() {
-                    if (introFinished || qi >= queue.length) {
-                        if (!introFinished) {
-                            revealAfterStream();
-                            startIntroBloom();
-                            finishIntro();
-                        }
+                    if (introState !== "streaming") return;
+                    if (qi >= queue.length) {
+                        revealAfterStream();
+                        startIntroBloom();
                         return;
                     }
 

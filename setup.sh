@@ -16,7 +16,12 @@ if [ ! -f "$HTML" ]; then
   exit 1
 fi
 
-# Replace the city-tag contents (works whether empty or already populated)
-sed -i '' 's|<span id="city-tag">[^<]*</span>|<span id="city-tag">'"$CITY"'</span>|' "$HTML"
+# Replace the city-tag contents (works whether empty or already populated).
+# Use GNU/BSD-compatible sed in-place flags.
+if sed --version >/dev/null 2>&1; then
+  sed -i 's|<span id="city-tag">[^<]*</span>|<span id="city-tag">'"$CITY"'</span>|' "$HTML"
+else
+  sed -i '' 's|<span id="city-tag">[^<]*</span>|<span id="city-tag">'"$CITY"'</span>|' "$HTML"
+fi
 
 echo "Set city to: $CITY"
