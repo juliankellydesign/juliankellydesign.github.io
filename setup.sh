@@ -16,6 +16,6 @@ if [ ! -f "$HTML" ]; then
 fi
 
 # Replace the city-tag contents (works whether empty or already populated)
-sed -i '' 's|<span class="tag fade" id="city-tag">[^<]*</span>|<span class="tag fade" id="city-tag">'"$CITY"'</span>|' "$HTML"
+sed -i '' 's|<span id="city-tag">[^<]*</span>|<span id="city-tag">'"$CITY"'</span>|' "$HTML"
 
 echo "Set city to: $CITY"
