@@ -46,9 +46,9 @@
                 --tag-bg: oklch(0.241 0.008 4.059);
                 --tag-bg-muted: color-mix(in oklch, var(--tag-bg), transparent 80%);
                 --border: color-mix(in oklch, var(--fg), transparent 75%);
-                --border-accent: oklch(from var(--accent) calc(l * 0.5) calc(c * 0.3) h);
+                --border-accent: color-mix(in oklch, var(--accent), transparent 75%);
                 --muted: color-mix(in oklch, var(--fg), transparent 40%);
-                --muted-accent: oklch(from var(--accent) calc(l * 0.7) calc(c * 0.6) h);
+                --muted-accent: color-mix(in oklch, var(--accent), transparent 40%);
                 --border-shadow: rgb(255, 255, 255, 0.12);
             }
             @media (prefers-color-scheme: light) {
@@ -60,10 +60,10 @@
                     --tag-bg: #fff;
                     --tag-bg-muted: color-mix(in oklch, var(--tag-bg), transparent 80%);
                     --border: color-mix(in oklch, var(--fg), transparent 75%);
-                    --border-accent: oklch(from var(--accent) calc(l * 0.5) calc(c * 0.3) h);
+                    --border-accent: color-mix(in oklch, var(--accent), transparent 75%);
                     --muted: color-mix(in oklch, var(--fg), transparent 40%);
-                    --muted-accent: oklch(from var(--accent) calc(l * 0.9) calc(c * 0.6) h);
-                    --border-shadow: rgba(0,0,0,0.64);
+                    --muted-accent: color-mix(in oklch, var(--accent), transparent 40%);
+                    --border-shadow: rgba(0,0,0,0.12);
                 }
             }
             @font-face {
@@ -331,7 +331,7 @@
                 justify-content: space-between;
                 padding: 0 8px 0 0;
                 height: 24px;
-                border: 1px solid var(--border-accent);
+                border: 1px solid var(--border);
                 border-radius: 4px;
                 z-index: 600;
                 pointer-events: auto;
@@ -350,7 +350,7 @@
                 width: 24px;
                 height: 22px;
                 border-radius: 3px 0 0 3px;
-                background: var(--border-accent);
+                background: var(--border);
                 flex-shrink: 0;
                 transition: background 0.4s;
             }
@@ -367,7 +367,7 @@
                 font-size: 13px;
                 line-height: 1;
                 font-weight: 400;
-                color: var(--muted-accent);
+                color: var(--muted);
                 font-family: "Karl Mono", monospace;
                 text-transform: uppercase;
                 letter-spacing: 0.04em;
@@ -377,7 +377,7 @@
                 font-size: 13px;
                 line-height: 1;
                 font-weight: 400;
-                color: var(--muted-accent);
+                color: var(--muted);
                 font-family: "Karl Mono", monospace;
                 text-transform: uppercase;
                 letter-spacing: 0.04em;
@@ -787,6 +787,28 @@
                 return (v - a) / (b - a);
             }
 
+            // --- Theme colors (single source of truth) ---
+            const THEME = {
+                dark: {
+                    bg: "#000",
+                    fg: "oklch(0.948 0.004 106.475)",
+                    accent: "oklch(0.7 0.337 28)",
+                    containerBg: "oklch(0.193 0.005 67.517)",
+                    tagBg: "oklch(0.241 0.008 4.059)",
+                    borderShadow: "rgb(255, 255, 255, 0.12)",
+                    themeColor: "#302a25",
+                },
+                light: {
+                    bg: "#fff",
+                    fg: "oklch(0 0 0)",
+                    accent: "oklch(0.7 0.307 78)",
+                    containerBg: "oklch(0.948 0.004 106.475)",
+                    tagBg: "#fff",
+                    borderShadow: "rgba(0,0,0,0.12)",
+                    themeColor: "#f7f6f2",
+                },
+            };
+
             // --- Parameters (controlled by sliders) ---
             // rings: 0..1 maps to 1..MAX_RINGS (default → 4)
             const LCH_LIGHT = { lightness: 0.8, chroma: 0.79, hue: 42 / 360 };
@@ -1076,7 +1098,7 @@
                 // Update --accent to follow the hue wave (use center ring's hue)
                 const accentHuePhase = (TWO_PI * now) / HUE_WAVE_PERIOD;
                 const accentHue = params.hue * 360 + (HUE_WAVE_RANGE / 2) * (1 - Math.cos(accentHuePhase));
-                const accentC = Math.max(params.chroma * 0.37, 0.05);
+                const accentC = Math.max(params.chroma * 0.25, 0.05);
                 document.documentElement.style.setProperty(
                     "--accent",
                     `oklch(${params.lightness.toFixed(2)} ${accentC.toFixed(3)} ${accentHue.toFixed(1)})`,
@@ -1088,7 +1110,7 @@
 
             // --- Controls UI ---
             function updateAccent() {
-                const c = Math.max(params.chroma * 0.37, 0.05);
+                const c = Math.max(params.chroma * 0.25, 0.05);
                 document.documentElement.style.setProperty(
                     "--accent",
                     `oklch(${params.lightness.toFixed(2)} ${c.toFixed(3)} ${params.hue * 360})`,
@@ -1225,36 +1247,18 @@
             bgBtn.textContent = params.light ? "Light" : "Dark";
             function applyTheme() {
                 const root = document.documentElement;
+                const t = params.light ? THEME.light : THEME.dark;
                 if (params.light) root.setAttribute("data-theme", "light");
                 else root.removeAttribute("data-theme");
                 bgBtn.textContent = params.light ? "Light" : "Dark";
-                root.style.setProperty("--bg", params.light ? "#fff" : "#000");
-                root.style.setProperty(
-                    "--fg",
-                    params.light
-                        ? "oklch(0 0 0)"
-                        : "oklch(0.948 0.004 106.475)",
-                );
-                root.style.setProperty(
-                    "--container-bg",
-                    params.light
-                        ? "oklch(0.948 0.004 106.475)"
-                        : "oklch(0.193 0.005 67.517)",
-                );
-                root.style.setProperty(
-                    "--tag-bg",
-                    params.light ? "#fff" : "oklch(0.241 0.008 4.059)",
-                );
-                root.style.setProperty(
-                    "--border-shadow",
-                    params.light ? "rgba(0,0,0,0.64)" : "rgb(255, 255, 255, 0.12)",
-                );
+                root.style.setProperty("--bg", t.bg);
+                root.style.setProperty("--fg", t.fg);
+                root.style.setProperty("--container-bg", t.containerBg);
+                root.style.setProperty("--tag-bg", t.tagBg);
+                root.style.setProperty("--border-shadow", t.borderShadow);
                 document
                     .querySelectorAll('meta[name="theme-color"]')
-                    .forEach(
-                        (m) =>
-                            (m.content = params.light ? "#f7f6f2" : "#302a25"),
-                    );
+                    .forEach((m) => (m.content = t.themeColor));
                 const preset = params.light ? LCH_LIGHT : LCH_DARK;
                 for (const k in preset) {
                     params[k] = preset[k];
