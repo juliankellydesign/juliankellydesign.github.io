@@ -307,6 +307,7 @@
                 font-family: inherit;
                 background: transparent;
                 user-select: none;
+                cursor: pointer;
                 transition: color 0.4s;
                 border: 1px solid
                     color-mix(in oklch, var(--fg), transparent 75%);
@@ -316,6 +317,17 @@
 
             #controls-wrap {
                 display: none;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                z-index: 50;
+                flex-direction: column;
+                align-items: center;
+                pointer-events: none;
+            }
+            #controls-wrap.visible {
+                display: flex;
             }
 
             #toggle-btn {
@@ -696,8 +708,12 @@
 
             // --- Parameters (controlled by sliders) ---
             // rings: 0..1 maps to 1..MAX_RINGS (default → 4)
-            const LCH_DARK = { lightness: 0.72, chroma: 0.78, hue: 24 / 360 };
             const LCH_LIGHT = { lightness: 0.8, chroma: 0.79, hue: 42 / 360 };
+            const LCH_DARK = {
+                lightness: LCH_LIGHT.lightness - 0.08,
+                chroma: LCH_LIGHT.chroma - 0.01,
+                hue: LCH_LIGHT.hue - 18 / 360,
+            };
             const systemLight = window.matchMedia(
                 "(prefers-color-scheme: light)",
             ).matches;
@@ -1005,7 +1021,21 @@
 
             const panel = document.getElementById("panel");
             const toggleBtn = document.getElementById("toggle-btn");
+            const controlsWrap = document.getElementById("controls-wrap");
             let panelOpen = false;
+            let controlsVisible = false;
+
+            document
+                .getElementById("last-updated")
+                .addEventListener("click", () => {
+                    controlsVisible = !controlsVisible;
+                    controlsWrap.classList.toggle("visible", controlsVisible);
+                    if (!controlsVisible) {
+                        panelOpen = false;
+                        panel.classList.remove("open");
+                        toggleBtn.textContent = "Controls";
+                    }
+                });
 
             toggleBtn.addEventListener("click", () => {
                 panelOpen = !panelOpen;
