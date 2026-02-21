@@ -1347,7 +1347,64 @@
                 requestAnimationFrame(wave);
             }
 
-            // --- Last updated (from GitHub API) ---
+            // --- Scramble text effect (vanilla JS, inspired by use-scramble) ---
+            function scrambleText(el, targetText, opts) {
+                opts = opts || {};
+                var duration = opts.duration || 600;
+                var glyphs =
+                    "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!<>-_[]{}=+*^?#.";
+                var startText = el.textContent || "";
+                var maxLen = Math.max(startText.length, targetText.length);
+                var startTime = null;
+
+                function step(timestamp) {
+                    if (!startTime) startTime = timestamp;
+                    var elapsed = timestamp - startTime;
+                    var progress = Math.min(elapsed / duration, 1);
+                    var output = "";
+
+                    for (var i = 0; i < maxLen; i++) {
+                        var norm = i / (maxLen - 1 || 1);
+                        // Each char settles at a staggered time, left to right
+                        var settleAt = norm * 0.6 + 0.4;
+                        var scrambleAt = norm * 0.3;
+                        var to =
+                            i < targetText.length ? targetText[i] : "";
+                        var from =
+                            i < startText.length ? startText[i] : "";
+
+                        if (progress >= settleAt) {
+                            output += to;
+                        } else if (progress >= scrambleAt) {
+                            // Preserve spaces during scramble
+                            if (to === " " || from === " ") {
+                                output += " ";
+                            } else {
+                                output +=
+                                    glyphs[
+                                        Math.floor(
+                                            Math.random() * glyphs.length,
+                                        )
+                                    ];
+                            }
+                        } else {
+                            output += from;
+                        }
+                    }
+
+                    el.textContent = output;
+
+                    if (progress < 1) {
+                        requestAnimationFrame(step);
+                    } else {
+                        el.textContent = targetText;
+                    }
+                }
+
+                requestAnimationFrame(step);
+            }
+
+            // --- Last updated (from GitHub API) + 5s scramble cycle ---
             fetch(
                 "https://api.github.com/repos/juliankellydesign/juliankellydesign.github.io/commits?per_page=1&sha=main",
             )
@@ -1357,8 +1414,20 @@
                     const yyyy = d.getFullYear();
                     const mm = String(d.getMonth() + 1).padStart(2, "0");
                     const dd = String(d.getDate()).padStart(2, "0");
-                    document.getElementById("last-updated").textContent =
+                    const updatedText =
                         "Updated " + yyyy + "." + mm + "." + dd;
+                    const altText = "Built with Conductor";
+                    const el = document.getElementById("last-updated");
+                    el.textContent = updatedText;
+
+                    let showingUpdated = true;
+                    setInterval(function () {
+                        scrambleText(
+                            el,
+                            showingUpdated ? altText : updatedText,
+                        );
+                        showingUpdated = !showingUpdated;
+                    }, 5000);
                 })
                 .catch(() => {});
 
