@@ -1266,6 +1266,7 @@
                     if (sliderUpdaters[k]) sliderUpdaters[k](params[k]);
                 }
                 updateAccent();
+                if (window.updateFavicon) window.updateFavicon();
             }
             bgBtn.addEventListener("click", () => {
                 params.light = !params.light;
@@ -1572,6 +1573,209 @@
                 }
 
                 setTimeout(next, 300);
+            })();
+
+            // --- Dynamic generative favicon (SVG + canvas PNG fallback) ---
+            (function () {
+                const favSeed =
+                    (Date.now() ^ (Math.random() * 0xffffffff)) >>> 0;
+                const favRng = mulberry32(favSeed);
+                const favStar0 = favRng();
+                const favDots = new Float32Array(DOTS_PER_STAR);
+                for (let i = 0; i < DOTS_PER_STAR; i++)
+                    favDots[i] = favRng();
+
+                const t = (favSeed % 60000) / 1000;
+                const cycleSec = ANIM_FRAMES / 60;
+                const progress = (((t / cycleSec) % 1) + 1) % 1;
+                const arcMin =
+                    0.875 - 0.075 * Math.cos((TWO_PI * t) / 10);
+                const arcWavePhase = (t / cycleSec) * TWO_PI;
+                const arcWave = (Math.sin(arcWavePhase) + 1) / 2;
+                const clamped = Math.min(arcMin, 0.95);
+                const effectiveArc =
+                    clamped + (0.95 - clamped) * arcWave;
+
+                const VS = 512;
+
+                // Compute dot data once, reuse for both SVG and canvas
+                function computeDots(isLight) {
+                    const L = isLight ? 0.8 : 0.72;
+                    const C = 1.0 * 0.37;
+                    const baseHue = isLight ? 42 : 24;
+                    const huePhase = (TWO_PI * t) / 20;
+                    const hueBase =
+                        baseHue +
+                        (HUE_WAVE_RANGE / 2) * (1 - Math.cos(huePhase));
+                    const threshScale = mapVal(0.85, 0, 1, 6, 0);
+                    const wave = normVal(
+                        Math.sin(progress * TWO_PI),
+                        -1,
+                        1,
+                    );
+                    const baseThresh = mapVal(
+                        wave,
+                        0,
+                        1,
+                        0,
+                        threshScale + favStar0 * 2,
+                    );
+
+                    const scale = VS / 90;
+                    const cx = VS / 2,
+                        cy = VS / 2;
+                    const subringGap = DOT_SUBRING_SPACING * scale;
+                    const innerOff = DOT_INNER_OFFSET * scale;
+                    const r = (DOT_RADIUS * scale) / 2;
+
+                    const dots = [];
+                    let di = 0;
+
+                    for (
+                        let sri = 0;
+                        sri < DOTS_PER_SUBRING.length;
+                        sri++
+                    ) {
+                        const n = DOTS_PER_SUBRING[sri];
+                        const rw = mapVal(
+                            sri,
+                            0,
+                            DOTS_PER_SUBRING.length - 1,
+                            1,
+                            0,
+                        );
+                        const freq =
+                            Math.floor(
+                                Math.max(favDots[di] * 4 - 2, 0),
+                            ) + 1;
+                        const lo =
+                            (progress * freq +
+                                Math.abs(favDots[di] / 1.5)) %
+                            1;
+
+                        for (let j = 0; j < n; j++) {
+                            const th =
+                                (TWO_PI / n) * j +
+                                SUBRING_OFFSETS[sri] * TWO_PI;
+                            const rad =
+                                subringGap * (sri + 0.5) + innerOff;
+                            const dx = rad * Math.cos(th) + cx;
+                            const dy = rad * Math.sin(th) + cy;
+                            const wa = (lo * TWO_PI) % TWO_PI;
+                            const da =
+                                ((th % TWO_PI) + TWO_PI) % TWO_PI;
+                            let ad = Math.abs(da - wa);
+                            if (ad > Math.PI) ad = TWO_PI - ad;
+
+                            let br = 0;
+                            if (ad <= effectiveArc * Math.PI) {
+                                const rp = normVal(
+                                    Math.sin(
+                                        th +
+                                            (lo +
+                                                favDots[di] * TWO_PI) *
+                                                TWO_PI *
+                                                2,
+                                    ),
+                                    -1,
+                                    1,
+                                );
+                                const amp = Math.abs(
+                                    favDots[di] * rp * rp,
+                                );
+                                const bw =
+                                    mapVal(
+                                        Math.sin(th + lo * TWO_PI),
+                                        -1,
+                                        1,
+                                        0,
+                                        2 - favDots[di] + rw / 2,
+                                    ) + amp;
+                                const vel = Math.cos(th + lo * TWO_PI);
+                                if (bw > baseThresh && vel >= 0) {
+                                    br = Math.ceil(
+                                        100 -
+                                            favDots[di] * 10 +
+                                            rw * 20,
+                                    );
+                                } else if (bw > baseThresh && vel < 0) {
+                                    br = Math.floor(100 + 20 * vel);
+                                } else {
+                                    br = 40 + Math.floor(rw * 20);
+                                }
+                            }
+
+                            const fb = Math.floor(br / 10) * 10;
+                            if (fb > 0.5) {
+                                const a = Math.max(fb / 100, 0.5);
+                                const H =
+                                    hueBase +
+                                    favDots[di] * 55 +
+                                    fb * 0.25 -
+                                    40;
+                                dots.push({ x: dx, y: dy, r, L, C, H, a });
+                            }
+                            di++;
+                        }
+                    }
+                    return dots;
+                }
+
+                function toSVG(dots) {
+                    let c = "";
+                    for (const d of dots) {
+                        c += `<circle cx="${d.x.toFixed(1)}" cy="${d.y.toFixed(1)}" r="${d.r.toFixed(1)}" style="fill:oklch(${d.L.toFixed(2)} ${d.C.toFixed(3)} ${d.H.toFixed(1)}/${d.a.toFixed(2)})"/>`;
+                    }
+                    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VS} ${VS}">${c}</svg>`;
+                }
+
+                function toPNG(dots) {
+                    const size = 64;
+                    const cv = document.createElement("canvas");
+                    cv.width = size;
+                    cv.height = size;
+                    const ctx = cv.getContext("2d");
+                    const s = size / VS;
+                    for (const d of dots) {
+                        ctx.fillStyle = `oklch(${d.L.toFixed(2)} ${d.C.toFixed(3)} ${d.H.toFixed(1)}/${d.a.toFixed(2)})`;
+                        ctx.beginPath();
+                        ctx.arc(
+                            d.x * s,
+                            d.y * s,
+                            d.r * s,
+                            0,
+                            TWO_PI,
+                        );
+                        ctx.fill();
+                    }
+                    return cv.toDataURL("image/png");
+                }
+
+                window.updateFavicon = function () {
+                    const dots = computeDots(params.light);
+
+                    // SVG favicon (Chrome, Firefox, Edge, Safari 16+)
+                    let svgLink = document.querySelector(
+                        'link[rel="icon"][type="image/svg+xml"]',
+                    );
+                    if (!svgLink) {
+                        svgLink = document.createElement("link");
+                        svgLink.rel = "icon";
+                        svgLink.type = "image/svg+xml";
+                        document.head.appendChild(svgLink);
+                    }
+                    svgLink.href =
+                        "data:image/svg+xml," +
+                        encodeURIComponent(toSVG(dots));
+
+                    // Canvas PNG fallback (older Safari, etc.)
+                    const pngLink = document.querySelector(
+                        'link[rel="icon"][type="image/png"]',
+                    );
+                    if (pngLink) pngLink.href = toPNG(dots);
+                };
+
+                window.updateFavicon();
             })();
         </script>
     </body>

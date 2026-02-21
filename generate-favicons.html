@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Star Favicon Generator</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            padding: 2rem;
+            background: #111;
+            color: #ddd;
+            min-height: 100vh;
+        }
+        h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+        .subtitle { opacity: 0.5; margin-bottom: 1.5rem; font-size: 0.875rem; }
+        .seed-display {
+            font-family: ui-monospace, monospace;
+            font-size: 0.75rem;
+            opacity: 0.3;
+            margin-bottom: 1rem;
+        }
+        .actions { margin-bottom: 2rem; display: flex; gap: 0.75rem; }
+        button {
+            padding: 10px 20px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 6px;
+            border: 1px solid #444;
+            background: #222;
+            color: #eee;
+            font-family: inherit;
+            transition: background 0.15s;
+        }
+        button:hover { background: #333; }
+        .mode-section { margin-bottom: 2.5rem; }
+        .mode-section h2 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            opacity: 0.4;
+            margin-bottom: 0.75rem;
+        }
+        .grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.25rem;
+            align-items: end;
+        }
+        .item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+        .item canvas {
+            border: 1px solid #2a2a2a;
+            border-radius: 4px;
+            cursor: pointer;
+            image-rendering: auto;
+            background-image:
+                linear-gradient(45deg, #1a1a1a 25%, transparent 25%),
+                linear-gradient(-45deg, #1a1a1a 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #1a1a1a 75%),
+                linear-gradient(-45deg, transparent 75%, #1a1a1a 75%);
+            background-size: 8px 8px;
+            background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+            background-color: #222;
+        }
+        .item canvas:hover { border-color: #555; }
+        .label {
+            font-size: 11px;
+            opacity: 0.35;
+            font-variant-numeric: tabular-nums;
+        }
+    </style>
+</head>
+<body>
+    <h1>Star Favicon Generator</h1>
+    <p class="subtitle">512&times;512 &middot; 12 phases &times; 2 modes &middot; generative</p>
+    <div class="seed-display" id="seed-display"></div>
+    <div class="actions">
+        <button id="regenerate">Regenerate</button>
+        <button id="download-all">Download All</button>
+    </div>
+    <div id="output"></div>
+
+    <script>
+    // =========================================================================
+    //  Star drawing logic (mirrored from index.html, tuned for favicon output)
+    // =========================================================================
+
+    const DOTS_PER_SUBRING = [3, 9, 14, 20, 28];
+    const SUBRING_OFFSETS  = [0.75, 0.25, 0.75, 0.125, 0.5];
+    const DOT_SUBRING_SPACING = 8;
+    const DOT_RADIUS   = 8;    // smaller so dots don't touch
+    const DOT_INNER_OFFSET = 1;
+    const DOTS_PER_STAR = DOTS_PER_SUBRING.reduce((a, b) => a + b, 0);
+    const TWO_PI = Math.PI * 2;
+    const MAX_RINGS = 10;
+    const BUF_SIZE  = 379;
+
+    function mulberry32(seed) {
+        return function () {
+            let t = (seed += 0x6d2b79f5);
+            t = Math.imul(t ^ (t >>> 15), t | 1);
+            t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+    }
+
+    function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+    function mapVal(v, a1, b1, a2, b2) { return a2 + (b2 - a2) * ((v - a1) / (b1 - a1)); }
+    function normVal(v, a, b) { return (v - a) / (b - a); }
+
+    let ringRand, starRand, dotRand, dotBrightness;
+
+    function initRandomArrays(seed) {
+        const rng = mulberry32(seed);
+        ringRand = new Float32Array(MAX_RINGS);
+        starRand = new Float32Array(BUF_SIZE);
+        const totalDotSlots = BUF_SIZE * DOTS_PER_STAR;
+        dotRand = new Float32Array(totalDotSlots);
+        dotBrightness = new Float32Array(totalDotSlots);
+        for (let i = 0; i < MAX_RINGS; i++) ringRand[i] = rng();
+        for (let i = 0; i < BUF_SIZE; i++) starRand[i] = rng();
+        for (let i = 0; i < totalDotSlots; i++) dotRand[i] = rng();
+    }
+
+    function drawStar(ctx, x, y, starIndex, progress, scale, p, effectiveArc, hueBase) {
+        const arcFrac    = effectiveArc;
+        const threshScale = mapVal(p.density, 0, 1, 6, 0);
+        const decaySpeed  = mapVal(p.decay, 0, 1, 0.2, 15);
+
+        const wave = normVal(Math.sin(progress * TWO_PI), -1, 1);
+        const baseThresh = mapVal(wave, 0, 1, 0, threshScale + starRand[starIndex % starRand.length] * 2);
+
+        const subringGap  = DOT_SUBRING_SPACING * scale;
+        const innerOffset = DOT_INNER_OFFSET * scale;
+        const dotHalfR    = (DOT_RADIUS * scale) / 2;
+
+        let di = starIndex * DOTS_PER_STAR;
+        for (let sri = 0; sri < DOTS_PER_SUBRING.length; sri++) {
+            const dotsInSubring = DOTS_PER_SUBRING[sri];
+            if (di + dotsInSubring > dotRand.length) break;
+
+            const freq = Math.floor(Math.max(dotRand[di] * 4 - 2, 0)) + 1;
+            const localOffset = (progress * freq + Math.abs(dotRand[di] / 1.5)) % 1;
+            const ringWeight = mapVal(sri, 0, DOTS_PER_SUBRING.length - 1, 1, 0);
+
+            for (let j = 0; j < dotsInSubring; j++) {
+                const theta = (TWO_PI / dotsInSubring) * j + SUBRING_OFFSETS[sri] * TWO_PI;
+                const rad = subringGap * (sri + 0.5) + innerOffset;
+                const dotX = rad * Math.cos(theta) + x;
+                const dotY = rad * Math.sin(theta) + y;
+
+                const waveAngle = (localOffset * TWO_PI) % TWO_PI;
+                const dotAngle  = ((theta % TWO_PI) + TWO_PI) % TWO_PI;
+                let angleDiff = Math.abs(dotAngle - waveAngle);
+                if (angleDiff > Math.PI) angleDiff = TWO_PI - angleDiff;
+
+                if (angleDiff > arcFrac * Math.PI) {
+                    dotBrightness[di] = clamp(dotBrightness[di] - decaySpeed, 0, 100);
+                    di++;
+                    continue;
+                }
+
+                const rp  = normVal(Math.sin(theta + (localOffset + dotRand[di] * TWO_PI) * TWO_PI * 2), -1, 1);
+                const amp = Math.abs(dotRand[di] * rp * rp);
+                const brightness_wave =
+                    mapVal(Math.sin(theta + localOffset * TWO_PI), -1, 1, 0, 2 - dotRand[di] + ringWeight / 2) + amp;
+                const vel = Math.cos(theta + localOffset * TWO_PI);
+
+                let br = dotBrightness[di] || 0;
+                if (brightness_wave > baseThresh && vel >= 0) {
+                    br = Math.ceil(100 - dotRand[di] * 10 + ringWeight * 20);
+                } else if (brightness_wave > baseThresh && vel < 0) {
+                    br = Math.floor(100 + 20 * vel);
+                } else {
+                    br = clamp(br - Math.ceil(decaySpeed / (ringWeight + 1)), 0, 50);
+                }
+                if (br < 0) br = 0;
+                dotBrightness[di] = br;
+
+                const finalB = Math.floor(br / 10) * 10;
+                if (finalB > 0.5) {
+                    const bN = Math.max(finalB / 100, 0.50);
+                    const L  = p.lightness;
+                    const C  = p.chroma * 0.37;
+                    const H  = hueBase + dotRand[di] * 55 + finalB * 0.25 - 40;
+                    ctx.fillStyle = `oklch(${L.toFixed(2)} ${C.toFixed(3)} ${H.toFixed(1)} / ${bN.toFixed(2)})`;
+                    ctx.beginPath();
+                    ctx.arc(dotX, dotY, dotHalfR, 0, TWO_PI);
+                    ctx.fill();
+                }
+                di++;
+            }
+        }
+    }
+
+    // =========================================================================
+    //  Animation timing — mirrors index.html but with tighter arc range
+    // =========================================================================
+
+    const CYCLE_SEC      = 3;      // dot activation period
+    const ARC_PERIOD     = 10;     // arc breathing period
+    const HUE_PERIOD     = 20;     // hue wave period
+    const SUPER_CYCLE    = 60;     // LCM
+    const HUE_WAVE_RANGE = 82;
+
+    // Arc stays high — nearly full circle, subtle breathing
+    const ARC_MID = 0.875;
+    const ARC_AMP = 0.075;        // oscillates 0.80 ↔ 0.95
+    const ARC_MAX = 0.95;
+
+    function getAnimState(t, baseHue) {
+        const progress = ((t / CYCLE_SEC) % 1 + 1) % 1;
+
+        const arcMin = ARC_MID - ARC_AMP * Math.cos(TWO_PI * t / ARC_PERIOD);
+        const arcWavePhase = (t / CYCLE_SEC) * TWO_PI;
+        const arcWave = (Math.sin(arcWavePhase) + 1) / 2;
+        const clamped = Math.min(arcMin, ARC_MAX);
+        const effectiveArc = clamped + (ARC_MAX - clamped) * arcWave;
+
+        const huePhase = TWO_PI * t / HUE_PERIOD;
+        const hue = baseHue + (HUE_WAVE_RANGE / 2) * (1 - Math.cos(huePhase));
+
+        return { progress, effectiveArc, hue };
+    }
+
+    // =========================================================================
+    //  Generation
+    // =========================================================================
+
+    const SIZE       = 512;
+    const PHASES     = 12;
+    const WARMUP_SEC = 5;
+    const DT         = 1 / 60;
+
+    // High density + slow decay → nearly all dots at full opacity
+    const LCH_DARK  = { lightness: 0.72, chroma: 1.0 };
+    const LCH_LIGHT = { lightness: 0.8,  chroma: 1.0 };
+
+    const MODES = [
+        { name: "dark",  label: "Dark mode",  params: { density: 0.85, decay: 0.01, ...LCH_DARK  }, baseHue: 24 },
+        { name: "light", label: "Light mode", params: { density: 0.85, decay: 0.01, ...LCH_LIGHT }, baseHue: 42 },
+    ];
+
+    let results = [];
+
+    function generate() {
+        const seed = (Date.now() ^ (Math.random() * 0xffffffff)) >>> 0;
+        const timeOffset = (seed % 60000) / 1000;
+
+        document.getElementById("seed-display").textContent = "seed " + seed;
+
+        const output = document.getElementById("output");
+        output.innerHTML = "";
+        results = [];
+
+        for (const mode of MODES) {
+            initRandomArrays(seed);
+
+            const section = document.createElement("div");
+            section.className = "mode-section";
+            const heading = document.createElement("h2");
+            heading.textContent = mode.label;
+            section.appendChild(heading);
+
+            const grid = document.createElement("div");
+            grid.className = "grid";
+
+            for (let phase = 0; phase < PHASES; phase++) {
+                const captureTime = timeOffset + (phase / PHASES) * SUPER_CYCLE;
+
+                for (let i = 0; i < DOTS_PER_STAR; i++) dotBrightness[i] = 0;
+
+                const canvas = document.createElement("canvas");
+                canvas.width  = SIZE;
+                canvas.height = SIZE;
+                const ctx = canvas.getContext("2d");
+                const scale = SIZE / 90;
+                const cx = SIZE / 2, cy = SIZE / 2;
+
+                // Simulate real animation leading up to capture
+                const warmupStart = captureTime - WARMUP_SEC;
+                const warmupFrames = Math.round(WARMUP_SEC / DT);
+
+                for (let f = 0; f <= warmupFrames; f++) {
+                    const t = warmupStart + f * DT;
+                    const state = getAnimState(t, mode.baseHue);
+                    ctx.clearRect(0, 0, SIZE, SIZE);
+                    drawStar(ctx, cx, cy, 0, state.progress, scale, mode.params, state.effectiveArc, state.hue);
+                }
+
+                const state = getAnimState(captureTime, mode.baseHue);
+                const hueLabel = Math.round(state.hue);
+                const filename = `favicon-${mode.name}-${String(phase + 1).padStart(2, "0")}.png`;
+                results.push({ canvas, filename });
+
+                const item = document.createElement("div");
+                item.className = "item";
+
+                canvas.style.width  = "128px";
+                canvas.style.height = "128px";
+                canvas.title = `Phase ${phase + 1}/12 · hue ${hueLabel}° · click to download`;
+                canvas.addEventListener("click", () => downloadCanvas(canvas, filename));
+
+                const label = document.createElement("div");
+                label.className = "label";
+                label.textContent = (phase + 1) + "/12";
+
+                item.appendChild(canvas);
+                item.appendChild(label);
+                grid.appendChild(item);
+            }
+
+            section.appendChild(grid);
+            output.appendChild(section);
+        }
+    }
+
+    // =========================================================================
+    //  Downloads
+    // =========================================================================
+
+    function downloadCanvas(canvas, filename) {
+        const a = document.createElement("a");
+        a.download = filename;
+        a.href = canvas.toDataURL("image/png");
+        a.click();
+    }
+
+    const dlBtn = document.getElementById("download-all");
+    dlBtn.addEventListener("click", () => {
+        dlBtn.disabled = true;
+        dlBtn.textContent = "Downloading…";
+        let i = 0;
+        function next() {
+            if (i >= results.length) {
+                dlBtn.disabled = false;
+                dlBtn.textContent = "Download All";
+                return;
+            }
+            const { canvas, filename } = results[i];
+            downloadCanvas(canvas, filename);
+            i++;
+            dlBtn.textContent = `Downloading… (${i}/${results.length})`;
+            setTimeout(next, 150);
+        }
+        next();
+    });
+
+    document.getElementById("regenerate").addEventListener("click", generate);
+
+    generate();
+    </script>
+</body>
+</html>
