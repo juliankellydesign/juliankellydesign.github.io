@@ -112,6 +112,7 @@
                 overflow: hidden;
                 background: var(--bg);
                 font-family: "Karl", sans-serif;
+                text-wrap: pretty;
                 transition: background 0.4s;
             }
 
@@ -670,7 +671,7 @@
             <div id="status-bar">
                 <div id="status-bar-left">
                     <div id="status-bar-logo"><svg viewBox="0 0 960 1520" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M300 320C311.046 320 320 328.954 320 340V540C320 551.046 311.046 560 300 560H20C8.95431 560 0 551.046 0 540V340C0 328.954 8.95431 320 20 320H300Z"/><path d="M300 640C311.046 640 320 648.954 320 660V860C320 871.046 311.046 880 300 880H20C8.95431 880 0 871.046 0 860V660C0 648.954 8.95431 640 20 640H300Z"/><path d="M300 960C311.046 960 320 968.954 320 980V1180C320 1191.05 311.046 1200 300 1200H20C8.95431 1200 0 1191.05 0 1180V980C0 968.954 8.95431 960 20 960H300Z"/><path d="M780 1280C791.046 1280 800 1288.95 800 1300V1500C800 1511.05 791.046 1520 780 1520H180C168.954 1520 160 1511.05 160 1500V1300C160 1288.95 168.954 1280 180 1280H780Z"/><path d="M940 960C951.046 960 960 968.954 960 980V1180C960 1191.05 951.046 1200 940 1200H660C648.954 1200 640 1191.05 640 1180V980C640 968.954 648.954 960 660 960H940Z"/><path d="M940 0C951.046 0 960 8.95431 960 20V220C960 231.046 951.046 240 940 240H180C168.954 240 160 231.046 160 220V20C160 8.9543 168.954 0 180 0H940Z"/><path d="M940 320C951.046 320 960 328.954 960 340V540C960 551.046 951.046 560 940 560H660C648.954 560 640 551.046 640 540V340C640 328.954 648.954 320 660 320H940Z"/></svg></div>
-                    <span id="city-tag">Dubai</span>
+                    <span id="city-tag">Florence</span>
                 </div>
                 <span id="last-updated"></span>
             </div>
@@ -697,9 +698,15 @@
                         el.style.opacity = "1";
                     });
             }, 400);
-            function revealAfterStream() {
+            window.revealAfterStream = function () {
                 document.getElementById("theme-toggle").style.opacity = "1";
-            }
+            };
+        </script>
+        <script type="module">
+            import { rybHsl2rgb } from "https://esm.sh/rybitten/";
+            import { cubes } from "https://esm.sh/rybitten/cubes";
+            const hypercardCube = cubes.get("apple80s").cube;
+            const revealAfterStream = window.revealAfterStream;
 
             // ==========================================================================
             //  TAXONOMY
@@ -763,6 +770,15 @@
                 return (v - a) / (b - a);
             }
 
+            // --- RYBitten color helper ---
+            function rybColor(h, s, l, alpha) {
+                const [r, g, b] = rybHsl2rgb([h % 360, s, l], { cube: hypercardCube });
+                const R = Math.round(r * 255);
+                const G = Math.round(g * 255);
+                const B = Math.round(b * 255);
+                return `rgba(${R},${G},${B},${alpha.toFixed(2)})`;
+            }
+
             // --- Theme colors (single source of truth) ---
             const THEME = {
                 dark: {
@@ -787,13 +803,14 @@
 
             // --- Parameters (controlled by sliders) ---
             // rings: 0..1 maps to 1..MAX_RINGS (default → 4)
-            const LCH_LIGHT = { lightness: 0.8, chroma: 0.79, hue: 42 / 360 };
+            const LCH_LIGHT = { lightness: 0.5, saturation: 0.95, hue: 355 / 360 };
             const LCH_DARK = {
-                lightness: LCH_LIGHT.lightness - 0.08,
-                chroma: LCH_LIGHT.chroma - 0.01,
-                hue: LCH_LIGHT.hue - 18 / 360,
+                lightness: 0.6,
+                saturation: 0.95,
+                hue: 355 / 360,
             };
-            const HUE_WAVE_RANGE = 82; // degrees (124 - 42)
+            const HUE_SPREAD_DEFAULT = 0.15; // per-dot hue variation (0-1 → 0-360°)
+            const HUE_SHIFT_DEFAULT = 160 / 360; // hue shift range over animation cycle (0-1 → 0-360°)
             const HUE_WAVE_PERIOD = 20000; // 20s full cycle (10s up, 10s back)
             const HUE_WAVE_LAG = Math.PI / 2; // phase lag from innermost to outermost ring
             const systemLight = window.matchMedia(
@@ -807,6 +824,8 @@
                 density: 0.1,
                 spread: 0.45,
                 rings: 7 / 9,
+                hueSpread: HUE_SPREAD_DEFAULT,
+                hueShift: HUE_SHIFT_DEFAULT,
                 ...(systemLight ? LCH_LIGHT : LCH_DARK),
                 light: systemLight,
             };
@@ -961,17 +980,14 @@
                         // --- Final brightness (quantized to steps of 10) ---
                         const finalB = Math.floor(br / 10) * 10;
 
-                        // --- Draw the dot (oklch with alpha) ---
+                        // --- Draw the dot (RYBitten color) ---
                         if (finalB > 0.5) {
                             const bN = finalB / 100;
-                            const L = p.lightness;
-                            const C = p.chroma * 0.37;
-                            const H =
+                            const dotHue =
                                 hueBase +
-                                dotRand[di] * 55 +
-                                finalB * 0.25 -
-                                40;
-                            ctx.fillStyle = `oklch(${L.toFixed(2)} ${C.toFixed(3)} ${H.toFixed(1)} / ${bN.toFixed(2)})`;
+                                (dotRand[di] - 0.5) * p.hueSpread * 360 +
+                                finalB * 0.25;
+                            ctx.fillStyle = rybColor(dotHue, p.saturation, p.lightness, bN);
                             ctx.beginPath();
                             ctx.arc(dotX, dotY, dotHalfR, 0, TWO_PI);
                             ctx.fill();
@@ -1025,7 +1041,7 @@
                     // inner rings lead and outer rings lag behind.
                     const ringNorm = activeRings > 1 ? ri / (activeRings - 1) : 0;
                     const huePhase = (TWO_PI * now) / HUE_WAVE_PERIOD - ringNorm * HUE_WAVE_LAG;
-                    const ringHue = params.hue * 360 + (HUE_WAVE_RANGE / 2) * (1 - Math.cos(huePhase));
+                    const ringHue = params.hue * 360 + (params.hueShift * 360 / 2) * (1 - Math.cos(huePhase));
 
                     const starsInRing = STARS_PER_RING[ri];
                     for (let j = 0; j < starsInRing; j++) {
@@ -1073,11 +1089,11 @@
                 }
                 // Update --accent to follow the hue wave (use center ring's hue)
                 const accentHuePhase = (TWO_PI * now) / HUE_WAVE_PERIOD;
-                const accentHue = params.hue * 360 + (HUE_WAVE_RANGE / 2) * (1 - Math.cos(accentHuePhase));
-                const accentC = Math.max(params.chroma * 0.25, 0.05);
+                const accentHue = params.hue * 360 + (params.hueShift * 360 / 2) * (1 - Math.cos(accentHuePhase));
+                const [aR, aG, aB] = rybHsl2rgb([accentHue % 360, params.saturation, params.lightness], { cube: hypercardCube });
                 document.documentElement.style.setProperty(
                     "--accent",
-                    `oklch(${params.lightness.toFixed(2)} ${accentC.toFixed(3)} ${accentHue.toFixed(1)})`,
+                    `rgb(${Math.round(aR * 255)},${Math.round(aG * 255)},${Math.round(aB * 255)})`,
                 );
 
                 requestAnimationFrame(frame);
@@ -1086,10 +1102,10 @@
 
             // --- Controls UI ---
             function updateAccent() {
-                const c = Math.max(params.chroma * 0.25, 0.05);
+                const [aR, aG, aB] = rybHsl2rgb([(params.hue * 360) % 360, params.saturation, params.lightness], { cube: hypercardCube });
                 document.documentElement.style.setProperty(
                     "--accent",
-                    `oklch(${params.lightness.toFixed(2)} ${c.toFixed(3)} ${params.hue * 360})`,
+                    `rgb(${Math.round(aR * 255)},${Math.round(aG * 255)},${Math.round(aB * 255)})`,
                 );
             }
 
@@ -1109,12 +1125,22 @@
                     label: "Lightness",
                     onChange: updateAccent,
                 },
-                { key: "chroma", label: "Chroma", onChange: updateAccent },
+                { key: "saturation", label: "Saturation", onChange: updateAccent },
                 {
                     key: "hue",
                     label: "Hue",
                     display: (v) => Math.round(v * 360),
                     onChange: updateAccent,
+                },
+                {
+                    key: "hueSpread",
+                    label: "Hue Spread",
+                    display: (v) => Math.round(v * 360) + "°",
+                },
+                {
+                    key: "hueShift",
+                    label: "Hue Shift",
+                    display: (v) => Math.round(v * 360) + "°",
                 },
             ];
 
@@ -1541,13 +1567,14 @@
 
                 // Compute dot data once, reuse for both SVG and canvas
                 function computeDots(isLight) {
-                    const L = isLight ? 0.8 : 0.72;
-                    const C = 1.0 * 0.37;
-                    const baseHue = isLight ? 42 : 24;
+                    const favL = isLight ? 0.5 : 0.6;
+                    const favS = 0.95;
+                    const baseHue = 355;
+                    const hueShiftDeg = params.hueShift * 360;
                     const huePhase = (TWO_PI * t) / 20;
                     const hueBase =
                         baseHue +
-                        (HUE_WAVE_RANGE / 2) * (1 - Math.cos(huePhase));
+                        (hueShiftDeg / 2) * (1 - Math.cos(huePhase));
                     const threshScale = mapVal(0.85, 0, 1, 6, 0);
                     const wave = normVal(
                         Math.sin(progress * TWO_PI),
@@ -1649,12 +1676,12 @@
                             const fb = Math.floor(br / 10) * 10;
                             if (fb > 0.5) {
                                 const a = Math.max(fb / 100, 0.5);
-                                const H =
+                                const dotHue =
                                     hueBase +
-                                    favDots[di] * 55 +
-                                    fb * 0.25 -
-                                    40;
-                                dots.push({ x: dx, y: dy, r, L, C, H, a });
+                                    (favDots[di] - 0.5) * HUE_SPREAD_DEFAULT * 360 +
+                                    fb * 0.25;
+                                const [fR, fG, fB] = rybHsl2rgb([dotHue % 360, favS, favL], { cube: hypercardCube });
+                                dots.push({ x: dx, y: dy, r, fR, fG, fB, a });
                             }
                             di++;
                         }
@@ -1665,7 +1692,7 @@
                 function toSVG(dots) {
                     let c = "";
                     for (const d of dots) {
-                        c += `<circle cx="${d.x.toFixed(1)}" cy="${d.y.toFixed(1)}" r="${d.r.toFixed(1)}" style="fill:oklch(${d.L.toFixed(2)} ${d.C.toFixed(3)} ${d.H.toFixed(1)}/${d.a.toFixed(2)})"/>`;
+                        c += `<circle cx="${d.x.toFixed(1)}" cy="${d.y.toFixed(1)}" r="${d.r.toFixed(1)}" style="fill:rgba(${Math.round(d.fR*255)},${Math.round(d.fG*255)},${Math.round(d.fB*255)},${d.a.toFixed(2)})"/>`;
                     }
                     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VS} ${VS}">${c}</svg>`;
                 }
@@ -1678,7 +1705,7 @@
                     const ctx = cv.getContext("2d");
                     const s = size / VS;
                     for (const d of dots) {
-                        ctx.fillStyle = `oklch(${d.L.toFixed(2)} ${d.C.toFixed(3)} ${d.H.toFixed(1)}/${d.a.toFixed(2)})`;
+                        ctx.fillStyle = `rgba(${Math.round(d.fR*255)},${Math.round(d.fG*255)},${Math.round(d.fB*255)},${d.a.toFixed(2)})`;
                         ctx.beginPath();
                         ctx.arc(
                             d.x * s,
