@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta
+            name="theme-color"
+            content="#302a25"
+            media="(prefers-color-scheme: dark)"
+        />
+        <meta
+            name="theme-color"
+            content="#f7f6f2"
+            media="(prefers-color-scheme: light)"
+        />
+        <title>Lightning Bolt — Julian Francis Kelly</title>
+        <meta
+            name="description"
+            content="What Lightning Bolt at 4 or 5 damage would mean against the top 1,000 EDHREC commanders."
+        />
+        <link rel="icon" type="image/png" href="/favicon.png" />
+        <meta property="og:type" content="article" />
+        <meta property="og:title" content="Lightning Bolt" />
+        <meta
+            property="og:description"
+            content="What Lightning Bolt at 4 or 5 damage would mean against the top 1,000 EDHREC commanders."
+        />
+        <meta property="og:url" content="https://jfk.works/lightning-bolt/" />
+        <meta property="og:image" content="https://jfk.works/og-image.png" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Lightning Bolt" />
+        <meta
+            name="twitter:description"
+            content="What Lightning Bolt at 4 or 5 damage would mean against the top 1,000 EDHREC commanders."
+        />
+        <meta name="twitter:image" content="https://jfk.works/og-image.png" />
+        <style>
+            :root {
+                --bg: #000;
+                --fg: oklch(0.948 0.004 106.475);
+                --accent: oklch(0.7 0.337 28);
+                --container-bg: oklch(0.193 0.005 67.517);
+                --tag-bg: oklch(0.241 0.008 4.059);
+                --border: color-mix(in oklch, var(--fg), transparent 75%);
+                --muted: color-mix(in oklch, var(--fg), transparent 40%);
+                --faint: color-mix(in oklch, var(--fg), transparent 65%);
+                --bar: color-mix(in oklch, var(--fg), transparent 82%);
+            }
+            @media (prefers-color-scheme: light) {
+                :root {
+                    --bg: #fff;
+                    --fg: oklch(0 0 0);
+                    --accent: oklch(0.7 0.307 78);
+                    --container-bg: oklch(0.948 0.004 106.475);
+                    --tag-bg: #fff;
+                    --border: color-mix(in oklch, var(--fg), transparent 75%);
+                    --muted: color-mix(in oklch, var(--fg), transparent 40%);
+                    --faint: color-mix(in oklch, var(--fg), transparent 65%);
+                    --bar: color-mix(in oklch, var(--fg), transparent 86%);
+                }
+            }
+            @font-face {
+                font-family: "Karl";
+                src: url("../karl-regular.otf");
+                font-weight: 400;
+            }
+            @font-face {
+                font-family: "Karl";
+                src: url("../karl-medium.otf");
+                font-weight: 500;
+            }
+            @font-face {
+                font-family: "Karl";
+                src: url("../karl-bold.otf");
+                font-weight: 700;
+            }
+            @font-face {
+                font-family: "Karl";
+                src: url("../karl-ultrablack.otf");
+                font-weight: 900;
+            }
+            @font-face {
+                font-family: "Karl Mono";
+                src: url("../karl-mono.ttf");
+                font-weight: 400;
+            }
+
+            ::selection {
+                background: var(--accent);
+                color: #fff;
+            }
+
+            *,
+            *::before,
+            *::after {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            html {
+                background: var(--bg);
+            }
+
+            body {
+                background: var(--bg);
+                color: var(--fg);
+                font-family: "Karl", sans-serif;
+                font-size: 17px;
+                line-height: 1.55;
+                text-wrap: pretty;
+                padding: 48px 20px 96px;
+            }
+
+            main {
+                max-width: 620px;
+                margin: 0 auto;
+            }
+
+            .back {
+                display: inline-block;
+                color: var(--muted);
+                text-decoration: none;
+                font-size: 15px;
+                font-weight: 500;
+                margin-bottom: 56px;
+                border-bottom: 2px dotted
+                    color-mix(in oklch, var(--fg), transparent 60%);
+            }
+            .back:hover {
+                color: var(--fg);
+                border-bottom-color: var(--fg);
+            }
+
+            h1 {
+                font-weight: 900;
+                font-size: 40px;
+                line-height: 1.1;
+                letter-spacing: -0.01em;
+                margin-bottom: 8px;
+            }
+
+            .subtitle {
+                color: var(--muted);
+                font-size: 17px;
+                margin-bottom: 40px;
+            }
+
+            p {
+                margin-bottom: 20px;
+            }
+
+            p a {
+                color: inherit;
+                text-decoration: none;
+                border-bottom: 2px dotted
+                    color-mix(in oklch, var(--fg), transparent 50%);
+            }
+            p a:hover {
+                border-bottom-color: var(--fg);
+            }
+
+            strong {
+                font-weight: 700;
+            }
+
+            .mono {
+                font-family: "Karl Mono", monospace;
+                font-size: 0.88em;
+            }
+
+            /* Histogram */
+
+            .chart {
+                margin: 40px 0;
+                border-top: 1px solid var(--border);
+                border-bottom: 1px solid var(--border);
+                padding: 20px 0;
+            }
+
+            .chart-title {
+                font-size: 13px;
+                font-weight: 500;
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+                color: var(--muted);
+                margin-bottom: 16px;
+            }
+
+            .row {
+                display: grid;
+                grid-template-columns: 2.4em 1fr 3.2em;
+                align-items: center;
+                gap: 12px;
+                padding: 2.5px 0;
+                font-family: "Karl Mono", monospace;
+                font-size: 14px;
+            }
+
+            .row .label {
+                text-align: right;
+                color: var(--muted);
+            }
+
+            .row .count {
+                text-align: right;
+                color: var(--muted);
+                font-variant-numeric: tabular-nums;
+            }
+
+            .row .track {
+                height: 14px;
+            }
+
+            .row .bar {
+                height: 100%;
+                min-width: 2px;
+                border-radius: 2px;
+                background: var(--bar);
+            }
+
+            .row.hit .bar {
+                background: var(--accent);
+            }
+            .row.hit .label,
+            .row.hit .count {
+                color: var(--fg);
+            }
+
+            .row.five .bar {
+                background: color-mix(in oklch, var(--accent), transparent 55%);
+            }
+
+            .chart-note {
+                margin-top: 14px;
+                font-size: 13px;
+                color: var(--faint);
+            }
+
+            /* Punchline stats */
+
+            .stats {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+                margin: 40px 0;
+            }
+            @media (max-width: 480px) {
+                .stats {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            .stat {
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: 18px 20px;
+            }
+
+            .stat .big {
+                font-weight: 900;
+                font-size: 34px;
+                line-height: 1.1;
+                letter-spacing: -0.01em;
+            }
+
+            .stat .big em {
+                font-style: normal;
+                color: var(--accent);
+            }
+
+            .stat .small {
+                margin-top: 4px;
+                font-size: 14px;
+                color: var(--muted);
+            }
+
+            footer {
+                margin-top: 64px;
+                padding-top: 20px;
+                border-top: 1px solid var(--border);
+                font-size: 13px;
+                line-height: 1.6;
+                color: var(--faint);
+            }
+
+            footer a {
+                color: inherit;
+                text-decoration: none;
+                border-bottom: 1px dotted var(--faint);
+            }
+            footer a:hover {
+                color: var(--muted);
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <a class="back" href="/">&larr; Julian Francis Kelly</a>
+
+            <h1>Lightning Bolt</h1>
+            <p class="subtitle">
+                One red mana, 3 damage, any target. What if it were 4? What if
+                it were 5?
+            </p>
+
+            <p>
+                Lightning Bolt has been the benchmark for red removal since
+                1993. Three damage for one mana is already efficient. But
+                efficiency is abstract until you ask what it actually kills
+                &mdash; specifically, the commanders people actually play.
+            </p>
+
+            <p>
+                So I pulled the top 1,000 commanders from EDHREC (Past 2 Years)
+                and looked up the toughness of each one. Here is how they
+                distribute:
+            </p>
+
+            <div class="chart">
+                <div class="chart-title">
+                    Front-face toughness, EDHREC top 1,000 commanders
+                </div>
+                <div class="row hit">
+                    <span class="label">0</span>
+                    <span class="track"
+                        ><span class="bar" style="width: 3.1%"></span
+                    ></span>
+                    <span class="count">8</span>
+                </div>
+                <div class="row hit">
+                    <span class="label">1</span>
+                    <span class="track"
+                        ><span class="bar" style="width: 19.5%"></span
+                    ></span>
+                    <span class="count">51</span>
+                </div>
+                <div class="row hit">
+                    <span class="label">2</span>
+                    <span class="track"
+                        ><span class="bar" style="width: 54.6%"></span
+                    ></span>
+                    <span class="count">143</span>
+                </div>
+                <div class="row hit">
+                    <span class="label">3</span>
+                    <span class="track"
+                        ><span class="bar" style="width: 98.1%"></span
+                    ></span>
+                    <span class="count">257</span>
+                </div>
+                <div class="row hit">
+                    <span class="label">4</span>
+                    <span class="track"
+                        ><span class="bar" style="width: 100%"></span
+                    ></span>
+                    <span class="count">262</span>
+                </div>
+                <div class="row five">
+                    <span class="label">5</span>
+                    <span class="track"
+                        ><span class="bar" style="width: 59.5%"></span
+                    ></span>
+                    <span class="count">156</span>
+                </div>
+                <div class="row">
+                    <span class="label">6</span>
+                    <span class="track"
+                        ><span class="bar" style="width: 19.5%"></span
+                    ></span>
+                    <span class="count">51</span>
+                </div>
+                <div class="row">
+                    <span class="label">7</span>
+                    <span class="track"
+                        ><span class="bar" style="width: 8.8%"></span
+                    ></span>
+                    <span class="count">23</span>
+                </div>
+                <div class="row">
+                    <span class="label">8</span>
+                    <span class="track"
+                        ><span class="bar" style="width: 4.2%"></span
+                    ></span>
+                    <span class="count">11</span>
+                </div>
+                <div class="row">
+                    <span class="label">9</span>
+                    <span class="track"
+                        ><span class="bar" style="width: 1.9%"></span
+                    ></span>
+                    <span class="count">5</span>
+                </div>
+                <div class="row">
+                    <span class="label">10</span>
+                    <span class="track"
+                        ><span class="bar" style="width: 1.1%"></span
+                    ></span>
+                    <span class="count">3</span>
+                </div>
+                <div class="row">
+                    <span class="label">12</span>
+                    <span class="track"
+                        ><span class="bar" style="width: 1.5%"></span
+                    ></span>
+                    <span class="count">4</span>
+                </div>
+                <div class="row">
+                    <span class="label">15</span>
+                    <span class="track"
+                        ><span class="bar" style="width: 0.8%"></span
+                    ></span>
+                    <span class="count">2</span>
+                </div>
+                <div class="row">
+                    <span class="label">17</span>
+                    <span class="track"
+                        ><span class="bar" style="width: 0.4%"></span
+                    ></span>
+                    <span class="count">1</span>
+                </div>
+                <div class="row">
+                    <span class="label">20</span>
+                    <span class="track"
+                        ><span class="bar" style="width: 0.4%"></span
+                    ></span>
+                    <span class="count">1</span>
+                </div>
+                <div class="row">
+                    <span class="label">*</span>
+                    <span class="track"
+                        ><span class="bar" style="width: 2.7%"></span
+                    ></span>
+                    <span class="count">7</span>
+                </div>
+                <div class="row">
+                    <span class="label">pw</span>
+                    <span class="track"
+                        ><span class="bar" style="width: 5.7%"></span
+                    ></span>
+                    <span class="count">15</span>
+                </div>
+                <div class="chart-note">
+                    Solid rows die to 4 damage. The lighter row is what 5
+                    damage adds. &ldquo;pw&rdquo; = planeswalker commanders.
+                </div>
+            </div>
+
+            <p>
+                The distribution peaks at exactly 4 toughness (262 commanders),
+                with 3 right behind it (257). Real Lightning Bolt, at 3 damage,
+                answers 459 of these 1,000 commanders &mdash; 45.9%. Useful,
+                but you feel the ceiling.
+            </p>
+
+            <p>
+                One more damage changes everything. Going from 3 to 4 steps
+                over the single largest toughness bucket in the format:
+            </p>
+
+            <div class="stats">
+                <div class="stat">
+                    <div class="big"><em>72.1%</em></div>
+                    <div class="small">
+                        die to <strong>4 damage</strong> &middot;
+                        <span class="mono">721 / 1000</span>
+                    </div>
+                </div>
+                <div class="stat">
+                    <div class="big"><em>87.7%</em></div>
+                    <div class="small">
+                        die to <strong>5 damage</strong> &middot;
+                        <span class="mono">877 / 1000</span>
+                    </div>
+                </div>
+            </div>
+
+            <p>
+                At 4 damage, a one-mana instant kills nearly three out of four
+                of the most-played commanders in the format, on sight, at
+                instant speed. That card would already be very, very good
+                &mdash; premium removal in any deck that can cast it.
+            </p>
+
+            <p>
+                At 5 damage, the argument is over. Seven out of eight
+                commanders die to it, and the survivors are mostly things like
+                The Ur-Dragon that you were never bolting anyway. A one-mana
+                &ldquo;destroy almost any commander&rdquo; is not a card you
+                consider &mdash; it is an auto-include in every deck that
+                produces a red mana.
+            </p>
+
+            <p>
+                Two footnotes on the tail: 7 commanders have
+                <span class="mono">*</span> toughness (it depends on the board,
+                so they don&rsquo;t fit a numeric bucket), and 15 are
+                planeswalkers with no toughness at all. Both groups sit outside
+                the percentages above.
+            </p>
+
+            <footer>
+                Data: <a
+                    href="https://edhrec.com/commanders"
+                    target="_blank"
+                    rel="noopener"
+                    >EDHREC</a
+                >
+                Past 2 Years top 1,000 commanders, snapshot 2026-09-24.
+                Toughness is front-face, via Scryfall. Percentages are out of
+                all 1,000.
+            </footer>
+        </main>
+    </body>
+</html>
