@@ -302,21 +302,23 @@
 
             <h1>Lightning Bolt</h1>
             <p class="subtitle">
-                One red mana, 3 damage, any target. What if it were 4? What if
-                it were 5?
+                One red mana, 3 damage, any target. What if it dealt 4? What
+                if it dealt 5?
             </p>
 
             <p>
                 Lightning Bolt has been the benchmark for red removal since
                 1993. Three damage for one mana is already efficient. But
                 efficiency is abstract until you ask what it actually kills
-                &mdash; specifically, the commanders people actually play.
+                &mdash; specifically, the creature commanders people actually
+                play.
             </p>
 
             <p>
                 So I pulled the top 1,000 commanders from EDHREC (Past 2 Years)
-                and looked up the toughness of each one. Here is how they
-                distribute:
+                and looked up the toughness of each one. Of the 1,000, 985 are
+                creatures on the front face; the other 15 are planeswalkers.
+                Here is how the full 1,000 distribute:
             </p>
 
             <div class="chart">
@@ -450,9 +452,9 @@
 
             <p>
                 The distribution peaks at exactly 4 toughness (262 commanders),
-                with 3 right behind it (257). Real Lightning Bolt, at 3 damage,
-                answers 459 of these 1,000 commanders &mdash; 45.9%. Useful,
-                but you feel the ceiling.
+                with 3 right behind it (257). Real Lightning Bolt, at 3
+                damage, answers 459 of the 985 creature commanders &mdash;
+                46.6%. Useful, but you feel the ceiling.
             </p>
 
             <p>
@@ -462,43 +464,47 @@
 
             <div class="stats">
                 <div class="stat">
-                    <div class="big"><em>72.1%</em></div>
+                    <div class="big"><em>73.2%</em></div>
                     <div class="small">
-                        die to <strong>4 damage</strong> &middot;
-                        <span class="mono">721 / 1000</span>
+                        die if Bolt dealt <strong>4</strong> &middot;
+                        <span class="mono">721 / 985</span> creature
+                        commanders
                     </div>
                 </div>
                 <div class="stat">
-                    <div class="big"><em>87.7%</em></div>
+                    <div class="big"><em>89.0%</em></div>
                     <div class="small">
-                        die to <strong>5 damage</strong> &middot;
-                        <span class="mono">877 / 1000</span>
+                        die if Bolt dealt <strong>5</strong> &middot;
+                        <span class="mono">877 / 985</span> creature
+                        commanders
                     </div>
                 </div>
             </div>
 
             <p>
-                At 4 damage, a one-mana instant kills nearly three out of four
-                of the most-played commanders in the format, on sight, at
-                instant speed. That card would already be very, very good
-                &mdash; premium removal in any deck that can cast it.
+                If Bolt dealt 4, a one-mana instant would kill nearly three
+                out of four of the most-played creature commanders in the
+                format, on sight, at instant speed. That card would already be
+                very, very good &mdash; premium removal in any deck that can
+                cast it.
             </p>
 
             <p>
-                At 5 damage, the argument is over. Seven out of eight
-                commanders die to it, and the survivors are mostly things like
-                The Ur-Dragon that you were never bolting anyway. A one-mana
-                &ldquo;destroy almost any commander&rdquo; is not a card you
-                consider &mdash; it is an auto-include in every deck that
-                produces a red mana.
+                If Bolt dealt 5, the argument is over. Nearly nine in ten
+                creature commanders die to it, and the survivors are mostly
+                things like The Ur-Dragon that you were never bolting anyway.
+                A one-mana &ldquo;destroy almost any commander&rdquo; is not a
+                card you consider &mdash; it is an auto-include in every deck
+                that produces a red mana.
             </p>
 
             <p>
-                Two footnotes on the tail: 7 commanders have
-                <span class="mono">*</span> toughness (it depends on the board,
-                so they don&rsquo;t fit a numeric bucket), and 15 are
-                planeswalkers with no toughness at all. Both groups sit outside
-                the percentages above.
+                Two footnotes. The 15 planeswalker commanders aren&rsquo;t
+                toughness-killed at all (damage removes loyalty, not life), so
+                they&rsquo;re out of the percentages entirely. The 7 commanders
+                with <span class="mono">*</span> toughness stay in the
+                denominator but never count as a fixed kill &mdash; their
+                toughness depends on the board.
             </p>
 
             <footer>
@@ -509,8 +515,10 @@
                     >EDHREC</a
                 >
                 Past 2 Years top 1,000 commanders, snapshot 2026-09-24.
-                Toughness is front-face, via Scryfall. Percentages are out of
-                all 1,000.
+                Toughness is front-face, via Scryfall. Kill percentages are
+                out of the 985 creature commanders (the 7 with
+                <span class="mono">*</span> toughness included, never counted
+                as killed).
             </footer>
         </main>
     </body>
