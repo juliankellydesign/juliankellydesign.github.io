@@ -16,14 +16,14 @@
         <title>Lightning Bolt — Julian Francis Kelly</title>
         <meta
             name="description"
-            content="What Lightning Bolt at 4 or 5 damage would mean against the top 1,000 EDHREC commanders."
+            content="If Lightning Bolt dealt 4, it would kill 73.2% of top EDHREC creature commanders. At 5, 89.0%."
         />
         <link rel="icon" type="image/png" href="/favicon.png" />
         <meta property="og:type" content="article" />
         <meta property="og:title" content="Lightning Bolt" />
         <meta
             property="og:description"
-            content="What Lightning Bolt at 4 or 5 damage would mean against the top 1,000 EDHREC commanders."
+            content="If Lightning Bolt dealt 4, it would kill 73.2% of top EDHREC creature commanders. At 5, 89.0%."
         />
         <meta property="og:url" content="https://jfk.works/lightning-bolt/" />
         <meta property="og:image" content="https://jfk.works/og-image.png" />
@@ -31,7 +31,7 @@
         <meta name="twitter:title" content="Lightning Bolt" />
         <meta
             name="twitter:description"
-            content="What Lightning Bolt at 4 or 5 damage would mean against the top 1,000 EDHREC commanders."
+            content="If Lightning Bolt dealt 4, it would kill 73.2% of top EDHREC creature commanders. At 5, 89.0%."
         />
         <meta name="twitter:image" content="https://jfk.works/og-image.png" />
         <style>
@@ -248,7 +248,7 @@
                 display: grid;
                 grid-template-columns: 1fr 1fr;
                 gap: 12px;
-                margin: 40px 0;
+                margin: 0 0 16px;
             }
             @media (max-width: 480px) {
                 .stats {
@@ -278,6 +278,23 @@
                 margin-top: 4px;
                 font-size: 14px;
                 color: var(--muted);
+            }
+
+            .ref {
+                font-size: 15px;
+                color: var(--muted);
+            }
+            .ref strong {
+                color: var(--fg);
+            }
+
+            .notes {
+                list-style: none;
+                font-size: 14px;
+                color: var(--muted);
+            }
+            .notes li + li {
+                margin-top: 4px;
             }
 
             footer {
@@ -323,10 +340,6 @@
                     margin: 32px 0;
                 }
 
-                .stats {
-                    margin: 32px 0;
-                }
-
                 .stat .big {
                     font-size: 30px;
                 }
@@ -344,28 +357,34 @@
 
             <h1>Lightning Bolt</h1>
             <p class="subtitle">
-                One red mana, 3 damage, any target. What if it dealt 4? What
-                if it dealt 5?
+                Creature commanders killed, of EDHREC&rsquo;s top 1,000.
             </p>
 
-            <p>
-                Lightning Bolt has been the benchmark for red removal since
-                1993. Three damage for one mana is already efficient. But
-                efficiency is abstract until you ask what it actually kills
-                &mdash; specifically, the creature commanders people actually
-                play.
-            </p>
+            <div class="stats">
+                <div class="stat">
+                    <div class="big"><em>73.2%</em></div>
+                    <div class="small">
+                        if Bolt dealt <strong>4</strong> &middot;
+                        <span class="mono">721 / 985</span>
+                    </div>
+                </div>
+                <div class="stat">
+                    <div class="big"><em>89.0%</em></div>
+                    <div class="small">
+                        if Bolt dealt <strong>5</strong> &middot;
+                        <span class="mono">877 / 985</span>
+                    </div>
+                </div>
+            </div>
 
-            <p>
-                So I pulled the top 1,000 commanders from EDHREC (Past 2 Years)
-                and looked up the toughness of each one. Of the 1,000, 985 are
-                creatures on the front face; the other 15 are planeswalkers.
-                Here is how the full 1,000 distribute:
+            <p class="ref">
+                Real Bolt deals 3: <strong>46.6%</strong> &middot;
+                <span class="mono">459 / 985</span>
             </p>
 
             <div class="chart">
                 <div class="chart-title">
-                    Front-face toughness, EDHREC top 1,000 commanders
+                    Toughness &middot; 985 creature commanders
                 </div>
                 <div class="row hit">
                     <span class="label">0</span>
@@ -479,88 +498,30 @@
                     ></span>
                     <span class="count">7</span>
                 </div>
-                <div class="row">
-                    <span class="label">pw</span>
-                    <span class="track"
-                        ><span class="bar" style="width: 5.7%"></span
-                    ></span>
-                    <span class="count">15</span>
-                </div>
-                <div class="chart-note">
-                    Solid rows die to 4 damage. The lighter row is what 5
-                    damage adds. &ldquo;pw&rdquo; = planeswalker commanders.
+                    <div class="chart-note">
+                    Solid: dies to 4. Light: dies to 5.
                 </div>
             </div>
 
-            <p>
-                The distribution peaks at exactly 4 toughness (262 commanders),
-                with 3 right behind it (257). Real Lightning Bolt, at 3
-                damage, answers 459 of the 985 creature commanders &mdash;
-                46.6%. Useful, but you feel the ceiling.
-            </p>
-
-            <p>
-                One more damage changes everything. Going from 3 to 4 steps
-                over the single largest toughness bucket in the format:
-            </p>
-
-            <div class="stats">
-                <div class="stat">
-                    <div class="big"><em>73.2%</em></div>
-                    <div class="small">
-                        die if Bolt dealt <strong>4</strong> &middot;
-                        <span class="mono">721 / 985</span> creature
-                        commanders
-                    </div>
-                </div>
-                <div class="stat">
-                    <div class="big"><em>89.0%</em></div>
-                    <div class="small">
-                        die if Bolt dealt <strong>5</strong> &middot;
-                        <span class="mono">877 / 985</span> creature
-                        commanders
-                    </div>
-                </div>
-            </div>
-
-            <p>
-                If Bolt dealt 4, a one-mana instant would kill nearly three
-                out of four of the most-played creature commanders in the
-                format, on sight, at instant speed. That card would already be
-                very, very good &mdash; premium removal in any deck that can
-                cast it.
-            </p>
-
-            <p>
-                If Bolt dealt 5, the argument is over. Nearly nine in ten
-                creature commanders die to it, and the survivors are mostly
-                things like The Ur-Dragon that you were never bolting anyway.
-                A one-mana &ldquo;destroy almost any commander&rdquo; is not a
-                card you consider &mdash; it is an auto-include in every deck
-                that produces a red mana.
-            </p>
-
-            <p>
-                Two footnotes. The 15 planeswalker commanders aren&rsquo;t
-                toughness-killed at all (damage removes loyalty, not life), so
-                they&rsquo;re out of the percentages entirely. The 7 commanders
-                with <span class="mono">*</span> toughness stay in the
-                denominator but never count as a fixed kill &mdash; their
-                toughness depends on the board.
-            </p>
+            <ul class="notes">
+                <li>
+                    15 planeswalker commanders excluded (no toughness).
+                </li>
+                <li>
+                    7 with <span class="mono">*</span> toughness counted in
+                    the 985, never as a kill.
+                </li>
+            </ul>
 
             <footer>
-                Data: <a
+                Source: <a
                     href="https://edhrec.com/commanders"
                     target="_blank"
                     rel="noopener"
                     >EDHREC</a
                 >
-                Past 2 Years top 1,000 commanders, snapshot 2026-09-24.
-                Toughness is front-face, via Scryfall. Kill percentages are
-                out of the 985 creature commanders (the 7 with
-                <span class="mono">*</span> toughness included, never counted
-                as killed).
+                Past 2 Years, top 1,000 commanders, 2026-09-24. Front-face
+                toughness via Scryfall.
             </footer>
         </main>
     </body>
