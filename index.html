@@ -702,6 +702,7 @@
                 document.getElementById("theme-toggle").style.opacity = "1";
             };
         </script>
+        <script src="walk-rig.js"></script>
         <script type="module">
             import { rybHsl2rgb } from "https://esm.sh/rybitten/";
             import { cubes } from "https://esm.sh/rybitten/cubes";
@@ -821,6 +822,7 @@
                 arcMax: 0,
                 decay: 0.05,
                 speed: 0.3,
+                gait: 0.5, // 0 shuffle, 0.5 walk, 1 run
                 density: 0.1,
                 spread: 0.45,
                 rings: 7 / 9,
@@ -997,97 +999,71 @@
                 }
             }
 
-            // --- Main animation loop ---
+            // --- Main animation loop: the walking guy ---
+            // The figure is a fixed field of LED dots; a dot lights when the animated
+            // skeleton's body covers it. Rig core lives in window.WalkRig (script above).
+            const W = window.WalkRig;
+            const RIG_VIEW = { x: 140, y: 115, w: 220, h: 270 }; // rig units framing the figure
+            const RIG_DOT_R = 4;
+            const walkField = W.buildField({ seed: 7 });
+            const walkDotRand = walkField.map(() => rng());
+            const reduceMotion = window.matchMedia(
+                "(prefers-reduced-motion: reduce)",
+            ).matches;
+            let walkPhase = 0;
+            let walkClock = 0;
+
             let prevT = performance.now();
             function frame(now) {
-                const dt = (now - prevT) / 1000;
+                const dt = Math.min(0.1, (now - prevT) / 1000);
                 prevT = now;
-                time += dt * mapVal(params.speed, 0, 1, 0.15, 3);
+                const speedMul = mapVal(params.speed, 0, 1, 0.15, 3);
+                time += dt * speedMul;
 
                 const dpr = window.devicePixelRatio || 1;
                 const w = canvas.width / dpr,
                     h = canvas.height / dpr;
-                const scale = (Math.min(w, h) / 900) * (w < 600 ? 1.75 : 1.25);
                 ctx.clearRect(0, 0, w, h);
 
-                const cycleSec = ANIM_FRAMES / 60; // seconds per animation cycle at base speed
-                const cycleProgress = (time / cycleSec) % 1;
-                const cx = w / 2,
-                    cy = h / 2;
+                // Rig controls: gait slider blends shuffle <-> walk <-> run.
+                const gait = mapVal(params.gait, 0, 1, -1, 1);
+                let c = Math.abs(gait) < 0.01 ? W.DEFAULTS : W.blendGait(W.DEFAULTS, gait);
+                c = W.applyVariation(c, 0.5, walkClock);
+                if (!reduceMotion) {
+                    walkClock += dt * speedMul;
+                    walkPhase = (walkPhase + (dt * speedMul * c.speed) / 120) % 1; // one cycle = two steps
+                }
+                const P = reduceMotion ? W.pose(0, W.REST) : W.pose(walkPhase, c);
 
-                // Current ring count from the slider (1..MAX_RINGS)
-                const activeRings = Math.round(
-                    mapVal(params.rings, 0, 1, 1, MAX_RINGS),
+                // Fit the figure to the container, centered.
+                const s = Math.min(
+                    (h * (w < 600 ? 0.6 : 0.68)) / RIG_VIEW.h,
+                    (w * 0.85) / RIG_VIEW.w,
                 );
+                const ox = w / 2 - (RIG_VIEW.x + RIG_VIEW.w / 2) * s;
+                const oy = h / 2 - (RIG_VIEW.y + RIG_VIEW.h / 2) * s;
 
-                // Star spacing along each ring, affected by the "spread" slider
-                const starGap =
-                    STAR_SPACING *
-                    scale *
-                    mapVal(params.spread, 0, 1, 0.4, 1.6);
-
-                const maxRingRadius =
-                    starGap * (activeRings - 1 + 0.5) + starGap / 4;
-
-                // Arc wave: a sine wave radiating outward from center, synced to animation cycle.
-                // Each star's visible arc oscillates between ARC_MIN and arcMax, with inner stars
-                // leading and outer stars lagging — creating a breathing/pulsing radial effect.
-                const arcWavePhase = (time / cycleSec) * TWO_PI;
-
-                // Walk through each ring, then each star in that ring
-                let starIndex = 0;
-                for (let ri = 0; ri < activeRings; ri++) {
-                    // Hue wave: sweeps from base hue to +82° and back over 20s,
-                    // inner rings lead and outer rings lag behind.
-                    const ringNorm = activeRings > 1 ? ri / (activeRings - 1) : 0;
-                    const huePhase = (TWO_PI * now) / HUE_WAVE_PERIOD - ringNorm * HUE_WAVE_LAG;
-                    const ringHue = params.hue * 360 + (params.hueShift * 360 / 2) * (1 - Math.cos(huePhase));
-
-                    const starsInRing = STARS_PER_RING[ri];
-                    for (let j = 0; j < starsInRing; j++) {
-                        // Place this star around the ring
-                        const theta =
-                            (TWO_PI / starsInRing) * j +
-                            RING_OFFSETS[ri] * TWO_PI;
-                        const ringRadius = starGap * (ri + 0.5) + starGap / 4;
-                        const starX = ringRadius * Math.cos(theta) + cx;
-                        const starY = ringRadius * Math.sin(theta) + cy;
-
-                        // Radial arc wave: stars closer to center lead, outer stars lag
-                        const distNorm =
-                            maxRingRadius > 0 ? ringRadius / maxRingRadius : 0;
-                        const arcWave =
-                            (Math.sin(arcWavePhase - distNorm * TWO_PI) + 1) /
-                            2; // 0..1
-                        const clampedArcMin = Math.min(ARC_MIN, params.arcMax);
-                        const effectiveArc =
-                            clampedArcMin +
-                            (params.arcMax - clampedArcMin) * arcWave;
-
-                        // All stars in a ring share the same random phase offset (ringRand),
-                        // so the wave front sweeps coherently around each ring (the "rotating" look).
-                        // Integer division on the ring term matches the original Processing sketch.
-                        const starProgress =
-                            (cycleProgress +
-                                normVal(theta, 0, TWO_PI) +
-                                ringRand[ri] +
-                                Math.floor((ri * 2) / activeRings)) %
-                            1;
-
-                        drawStar(
-                            starX,
-                            starY,
-                            starIndex,
-                            starProgress,
-                            scale,
-                            params,
-                            effectiveArc,
-                            ringHue,
-                        );
-                        starIndex++;
+                // Hue wave: sweeps from base hue by hueShift and back over 20s, lagging
+                // from head to feet so the color travels down the figure.
+                const fade = clamp(params.arcMax / 0.6, 0, 1); // intro bloom
+                if (fade > 0) {
+                    for (let i = 0; i < walkField.length; i++) {
+                        const d = walkField[i];
+                        if (!W.inside(d.x, d.y, P.bones)) continue;
+                        const yNorm = clamp((d.y - RIG_VIEW.y) / RIG_VIEW.h, 0, 1);
+                        const huePhase = (TWO_PI * now) / HUE_WAVE_PERIOD - yNorm * HUE_WAVE_LAG;
+                        const hue =
+                            params.hue * 360 +
+                            ((params.hueShift * 360) / 2) * (1 - Math.cos(huePhase)) +
+                            (walkDotRand[i] - 0.5) * params.hueSpread * 360;
+                        ctx.fillStyle = rybColor(hue, params.saturation, params.lightness, fade);
+                        ctx.beginPath();
+                        ctx.arc(ox + d.x * s, oy + d.y * s, RIG_DOT_R * s, 0, TWO_PI);
+                        ctx.fill();
                     }
                 }
-                // Update --accent to follow the hue wave (use center ring's hue)
+
+                // Update --accent to follow the hue wave
                 const accentHuePhase = (TWO_PI * now) / HUE_WAVE_PERIOD;
                 const accentHue = params.hue * 360 + (params.hueShift * 360 / 2) * (1 - Math.cos(accentHuePhase));
                 const [aR, aG, aB] = rybHsl2rgb([accentHue % 360, params.saturation, params.lightness], { cube: hypercardCube });
@@ -1111,15 +1087,14 @@
 
             const SLIDERS = [
                 {
-                    key: "rings",
-                    label: "Rings",
-                    display: (v) => Math.round(mapVal(v, 0, 1, 1, MAX_RINGS)),
+                    key: "gait",
+                    label: "Gait",
+                    display: (v) => {
+                        const g = Math.round(mapVal(v, 0, 1, -100, 100));
+                        return g === 0 ? "Walk" : g < 0 ? "Shuffle " + -g + "%" : "Run " + g + "%";
+                    },
                 },
-                { key: "arcMax", label: "Dot Arc Max" },
-                { key: "decay", label: "Dot Decay" },
-                { key: "density", label: "Dot Density" },
                 { key: "speed", label: "Speed" },
-                { key: "spread", label: "Star Spread" },
                 {
                     key: "lightness",
                     label: "Lightness",
