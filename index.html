@@ -1212,17 +1212,27 @@
                         ctx.globalAlpha = 1;
                     }
 
+                    // Game over swaps the walker for the orange "don't walk" hand, which
+                    // flashes like a crossing signal and then holds steady.
+                    const overT = game.mode === "over" ? (now - game.overAt) / 1000 : -1;
+                    const walkerA = overT < 0 ? 1 : clamp(1 - overT / 0.25, 0, 1);
+                    const handA =
+                        overT < 0.15 ? 0 : overT < 1.95 ? (Math.floor((overT - 0.15) / 0.3) % 2 === 0 ? 1 : 0) : 1;
+
                     for (const o of game.obstacles)
                         for (const [x, y] of obstacleDots(o))
-                            dot(x, y, rybColor(hueAt(y, 0.25), params.saturation, params.lightness, fade * trailAlpha(x)));
+                            dot(x, y, rybColor(hueAt(y, 0.25), params.saturation, params.lightness, fade * trailAlpha(x) * walkerA));
 
                     // The figure, lifted by the jump.
-                    for (let i = 0; i < walkField.length; i++) {
-                        const d = walkField[i];
-                        if (!W.inside(d.x, d.y, P.bones)) continue;
-                        const color = rybColor(hueAt(d.y, walkDotRand[i] - 0.5), params.saturation, params.lightness, fade);
-                        dot(d.x, d.y - game.jumpY, color);
-                    }
+                    if (walkerA > 0)
+                        for (let i = 0; i < walkField.length; i++) {
+                            const d = walkField[i];
+                            if (!W.inside(d.x, d.y, P.bones)) continue;
+                            const color = rybColor(hueAt(d.y, walkDotRand[i] - 0.5), params.saturation, params.lightness, fade * walkerA);
+                            dot(d.x, d.y - game.jumpY, color);
+                        }
+                    if (handA > 0)
+                        for (const [x, y] of W.STOP_HAND) dot(x, y, `rgba(255,123,0,${handA * fade})`);
 
                     // Score and hints, centered above the head.
                     if (gameReady) {
