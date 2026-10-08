@@ -1,0 +1,8 @@
+.git/
+.github/
+.assetsignore
+wrangler.jsonc
+CNAME
+setup.sh
+conductor.json
+.wrangler/

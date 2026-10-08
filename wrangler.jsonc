@@ -1,0 +1,11 @@
+// Cloudflare Workers config for the jfk-works preview site.
+// Serves the repo root as static assets; the `previews` block lets
+// non-main branches get their own preview link via `wrangler preview`.
+{
+  "name": "jfk-works",
+  "compatibility_date": "2026-10-06",
+  "assets": {
+    "directory": "."
+  },
+  "previews": {}
+}
