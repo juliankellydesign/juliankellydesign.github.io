@@ -1231,14 +1231,8 @@
                             const color = rybColor(hueAt(d.y, walkDotRand[i] - 0.5), params.saturation, params.lightness, fade * walkerA);
                             dot(d.x, d.y - game.jumpY, color);
                         }
-                    if (handA > 0) {
-                        ctx.fillStyle = `rgba(255,123,0,${handA * fade})`;
-                        for (const [x, y] of W.STOP_HAND) {
-                            ctx.beginPath();
-                            ctx.arc(ox + x * s, oy + y * s, 3 * s, 0, TWO_PI); // smaller dots so finger pairs don't touch
-                            ctx.fill();
-                        }
-                    }
+                    if (handA > 0)
+                        for (const [x, y] of W.STOP_HAND) dot(x, y, `rgba(255,123,0,${handA * fade})`);
 
                     // Score and hints, centered above the head.
                     if (gameReady) {
