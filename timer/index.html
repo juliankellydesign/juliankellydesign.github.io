@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Presentation Timer</title>
+        <meta name="robots" content="noindex" />
+        <link rel="icon" href="../favicon.png" />
+        <style>
+            html,
+            body {
+                margin: 0;
+                height: 100%;
+                background: #000;
+                overflow: hidden;
+                cursor: none;
+            }
+            canvas {
+                display: block;
+                width: 100vw;
+                height: 100vh;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="c" role="img" aria-label="Presentation timer"></canvas>
+        <script src="../walk-rig.js"></script>
+        <script>
+            // Presentation timer forked from the homepage walking guy.
+            // 0–9 min the guy walks, 9–10 min the hand flashes, 10–15 min the hand
+            // holds solid, then the screen goes black. Space (or a tap) restarts.
+            // ?fast runs the whole thing 60x quicker, for checking the sequence.
+            const W = window.WalkRig;
+            const SPEED = new URLSearchParams(location.search).has("fast") ? 60 : 1;
+            const MIN = 60 / SPEED; // seconds per "minute"
+            const WALK_END = 9 * MIN,
+                FLASH_END = 10 * MIN,
+                HOLD_END = 15 * MIN;
+            const FLASH_PERIOD = 1; // seconds per on/off cycle of the flashing hand
+
+            const RIG_VIEW = { x: 140, y: 115, w: 220, h: 270 }; // rig units framing the figure
+            const RIG_DOT_R = 4;
+            const walkField = W.buildField({ seed: 7 });
+            const restPose = W.pose(0, W.REST);
+            const GROUND = Math.max(...restPose.legs.map((l) => l[2][1])) + W.BODY.rLeg;
+
+            // Ground: rows of dots under the feet, sparser toward the viewer, each
+            // scrolling in step with the planted foot (scaled by its spacing).
+            const FOOT_SPEED = 112; // rig units/s the stance foot travels back at DEFAULTS
+            const GROUND_ROWS = [0, 1, 2, 3, 4].map((i) => ({
+                y: GROUND + 16 + i * 16,
+                pitch: 15.3 * Math.pow(1.22, i),
+                x: 0,
+            }));
+
+            const canvas = document.getElementById("c");
+            const ctx = canvas.getContext("2d");
+            function resize() {
+                const dpr = window.devicePixelRatio || 1;
+                canvas.width = innerWidth * dpr;
+                canvas.height = innerHeight * dpr;
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            }
+            addEventListener("resize", resize);
+            resize();
+
+            const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+            let startAt = performance.now();
+            let walkPhase = 0;
+            let walkClock = 0;
+
+            function restart() {
+                startAt = performance.now();
+                walkPhase = 0;
+                walkClock = 0;
+                for (const r of GROUND_ROWS) r.x = 0;
+                keepAwake();
+            }
+            addEventListener("keydown", (e) => {
+                if (e.code === "Space") {
+                    e.preventDefault();
+                    if (!e.repeat) restart();
+                } else if (e.key === "f" || e.key === "F") {
+                    if (document.fullscreenElement) document.exitFullscreen();
+                    else document.documentElement.requestFullscreen?.();
+                }
+            });
+            canvas.addEventListener("pointerdown", restart);
+
+            // Keep the screen from sleeping mid-presentation, where supported.
+            let wakeLock = null;
+            async function keepAwake() {
+                try {
+                    if ("wakeLock" in navigator && !wakeLock) {
+                        wakeLock = await navigator.wakeLock.request("screen");
+                        wakeLock.addEventListener("release", () => (wakeLock = null));
+                    }
+                } catch (e) {}
+            }
+            document.addEventListener("visibilitychange", () => {
+                if (document.visibilityState === "visible") keepAwake();
+            });
+            keepAwake();
+
+            let prevT = performance.now();
+            function frame(now) {
+                const dt = Math.min(0.1, (now - prevT) / 1000);
+                prevT = now;
+                const t = (now - startAt) / 1000; // wall clock, so a throttled tab stays accurate
+
+                const w = innerWidth,
+                    h = innerHeight;
+                ctx.fillStyle = "#000";
+                ctx.fillRect(0, 0, w, h);
+
+                const s = Math.min((h * 0.6) / RIG_VIEW.h, (w * 0.85) / RIG_VIEW.w);
+                const ox = w / 2 - (RIG_VIEW.x + RIG_VIEW.w / 2) * s;
+                const oy = h / 2 - (RIG_VIEW.y + RIG_VIEW.h / 2) * s;
+                const dot = (x, y) => {
+                    ctx.beginPath();
+                    ctx.arc(ox + x * s, oy + y * s, RIG_DOT_R * s, 0, Math.PI * 2);
+                    ctx.fill();
+                };
+
+                if (t < WALK_END) {
+                    let c = W.applyVariation(W.DEFAULTS, 0.5, walkClock);
+                    if (!reduceMotion) {
+                        walkClock += dt;
+                        walkPhase = (walkPhase + (dt * c.speed) / 120) % 1;
+                        for (const r of GROUND_ROWS)
+                            r.x = (r.x + ((dt * FOOT_SPEED * r.pitch) / GROUND_ROWS[0].pitch)) % r.pitch;
+                    }
+                    const P = reduceMotion ? W.pose(0, W.REST) : W.pose(walkPhase, c);
+                    ctx.fillStyle = "#fff";
+                    for (const d of walkField) if (W.inside(d.x, d.y, P.bones)) dot(d.x, d.y);
+
+                    const left = -ox / s,
+                        right = (w - ox) / s;
+                    for (const r of GROUND_ROWS) {
+                        if (oy + r.y * s > h + RIG_DOT_R * s) break;
+                        const x0 = Math.floor((left + r.x) / r.pitch) * r.pitch - r.x;
+                        for (let x = x0; x < right + r.pitch; x += r.pitch) dot(x, r.y);
+                    }
+                } else if (t < HOLD_END) {
+                    const on = t >= FLASH_END || (t - WALK_END) % FLASH_PERIOD < FLASH_PERIOD / 2;
+                    if (on) {
+                        ctx.fillStyle = "rgb(255,123,0)";
+                        for (const [x, y] of W.STOP_HAND) dot(x, y);
+                    }
+                }
+                requestAnimationFrame(frame);
+            }
+            requestAnimationFrame(frame);
+        </script>
+    </body>
+</html>
