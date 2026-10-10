@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+        <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+        <title>Type Scale — Julian Francis Kelly</title>
+        <meta name="description" content="A modular type scale with a tapering tracking curve and grid-snapped line heights. Drag the curves, then copy CSS, design tokens or Tailwind." />
+        <link rel="icon" type="image/png" href="/favicon.png" />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="Type Scale" />
+        <meta property="og:description" content="A modular type scale with a tapering tracking curve and grid-snapped line heights." />
+        <meta property="og:url" content="https://jfk.works/type-scale/" />
+        <meta property="og:image" content="https://jfk.works/og-image.png" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <style>
+            :root {
+                --bg: #000;
+                --fg: oklch(0.948 0.004 106.475);
+                --accent: oklch(0.7 0.337 28);
+                --surface: oklch(0.193 0.005 67.517);
+                --surface-hover: oklch(0.241 0.008 4.059);
+                --border: color-mix(in oklch, var(--fg), transparent 75%);
+                --border-subtle: color-mix(in oklch, var(--fg), transparent 85%);
+                --muted: color-mix(in oklch, var(--fg), transparent 40%);
+                --faint: color-mix(in oklch, var(--fg), transparent 65%);
+            }
+            @media (prefers-color-scheme: light) {
+                :root {
+                    --bg: #fff;
+                    --fg: oklch(0 0 0);
+                    --accent: oklch(0.7 0.307 78);
+                    --surface: oklch(0.948 0.004 106.475);
+                    --surface-hover: oklch(0.92 0.004 106.475);
+                    --border: color-mix(in oklch, var(--fg), transparent 75%);
+                    --border-subtle: color-mix(in oklch, var(--fg), transparent 88%);
+                    --muted: color-mix(in oklch, var(--fg), transparent 40%);
+                    --faint: color-mix(in oklch, var(--fg), transparent 65%);
+                }
+            }
+            @font-face { font-family: "Karl"; src: url("../karl-regular.otf"); font-weight: 400; }
+            @font-face { font-family: "Karl"; src: url("../karl-medium.otf"); font-weight: 500 600; }
+            @font-face { font-family: "Karl"; src: url("../karl-bold.otf"); font-weight: 700; }
+            @font-face { font-family: "Karl"; src: url("../karl-ultrablack.otf"); font-weight: 900; }
+            @font-face { font-family: "Karl Mono"; src: url("../karl-mono.ttf"); font-weight: 400; }
+
+            ::selection { background: var(--accent); color: #fff; }
+
+            *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+            html { background: var(--bg); }
+
+            body {
+                background: var(--bg);
+                color: var(--fg);
+                font-family: "Karl", sans-serif;
+                font-size: 17px;
+                line-height: 1.55;
+                text-wrap: pretty;
+                padding: 48px 20px 96px;
+            }
+
+            .page { max-width: 1120px; margin: 0 auto; }
+
+            .back {
+                display: inline-block;
+                color: var(--muted);
+                font-size: 15px;
+                font-weight: 500;
+                text-decoration: underline dotted color-mix(in oklch, var(--fg), transparent 60%);
+                text-decoration-thickness: 2px;
+                text-underline-offset: 4px;
+                padding: 12px 16px 12px 0;
+                margin: -12px 0 44px;
+            }
+            .back:hover { color: var(--fg); text-decoration-color: var(--fg); }
+
+            h1 { font-weight: 900; font-size: 40px; line-height: 1.1; letter-spacing: -0.01em; margin-bottom: 8px; }
+            .subtitle { color: var(--muted); max-width: 620px; margin-bottom: 40px; }
+
+            .mono, .type-token, .type-meta, .tracking-label, .curve-inputs label {
+                font-family: "Karl Mono", monospace;
+                font-variant-numeric: tabular-nums;
+            }
+
+            /* Layout */
+
+            .main { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 40px; align-items: start; }
+
+            .panel { display: flex; flex-direction: column; gap: 28px; position: sticky; top: 20px; }
+            .panel-section { display: flex; flex-direction: column; gap: 12px; }
+
+            h2 {
+                font-size: 13px;
+                font-weight: 500;
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+                color: var(--muted);
+            }
+
+            .field, .checkbox-field { font-size: 14px; color: var(--muted); }
+            .field { display: flex; flex-direction: column; gap: 4px; }
+            .field-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+            .checkbox-field { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+            .checkbox-field input { accent-color: var(--accent); width: 16px; height: 16px; }
+
+            input[type="number"], input[type="text"], select {
+                width: 100%;
+                font: inherit;
+                font-size: 15px;
+                color: var(--fg);
+                background: var(--surface);
+                border: 1px solid var(--border-subtle);
+                border-radius: 8px;
+                padding: 7px 10px;
+            }
+            select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 15px) 50%, calc(100% - 10px) 50%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 28px; }
+            input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+            button { font: inherit; color: inherit; cursor: pointer; }
+
+            .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+            .btn {
+                font-size: 14px;
+                font-weight: 500;
+                background: var(--surface);
+                border: 1px solid var(--border-subtle);
+                border-radius: 999px;
+                padding: 6px 14px;
+            }
+            .btn:hover { background: var(--surface-hover); }
+            .btn-quiet { background: transparent; color: var(--muted); }
+            .btn-quiet:hover { color: var(--fg); }
+
+            /* Curve editor */
+
+            .curve-editor { display: flex; flex-direction: column; gap: 8px; }
+            .curve-graph { width: 100%; max-width: 240px; align-self: center; touch-action: none; }
+            .curve-frame { fill: var(--surface); stroke: var(--border-subtle); }
+            .curve-diagonal { stroke: var(--border); stroke-dasharray: 4 4; }
+            .curve-axis { stroke: var(--border); }
+            .curve-arm { stroke: var(--muted); stroke-width: 1; }
+            .curve-path { fill: none; stroke: var(--fg); stroke-width: 2.5; stroke-linecap: round; }
+            .curve-handle { fill: var(--bg); stroke: var(--accent); stroke-width: 2.5; cursor: grab; }
+            .curve-handle:active { cursor: grabbing; }
+            .curve-handle.is-vertical { cursor: ns-resize; }
+            .curve-mark { fill: var(--fg); }
+            .curve-inputs { display: grid; grid-template-columns: repeat(var(--curve-fields, 4), minmax(0, 1fr)); gap: 6px; }
+            .curve-inputs label { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--muted); }
+            .curve-inputs input { padding: 6px 6px; font-size: 14px; -moz-appearance: textfield; }
+            .curve-inputs input::-webkit-inner-spin-button, .curve-inputs input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+            /* Output */
+
+            .output { display: flex; flex-direction: column; gap: 48px; min-width: 0; }
+            .output-section { display: flex; flex-direction: column; gap: 12px; }
+            .output-header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+            .output-header p { font-size: 14px; color: var(--muted); }
+
+            .type-table { display: flex; flex-direction: column; border: 1px solid var(--border-subtle); border-radius: 12px; overflow: hidden; }
+            .type-row {
+                display: grid;
+                grid-template-columns: 110px minmax(0, 1fr) 64px 96px 72px;
+                gap: 16px;
+                align-items: center;
+                width: 100%;
+                padding: 12px 16px;
+                border: none;
+                border-bottom: 1px solid var(--border-subtle);
+                background: transparent;
+                text-align: left;
+            }
+            .type-row:last-child { border-bottom: none; }
+            button.type-row:hover { background: var(--surface-hover); }
+            .type-row.is-base { background: var(--surface); }
+            .type-row-header { font-size: 13px; font-weight: 500; color: var(--muted); padding-top: 10px; padding-bottom: 10px; }
+            .type-row-header span:nth-child(n + 3) { text-align: right; }
+            .type-sample { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .type-token, .type-meta { font-size: 13px; line-height: 1.4; color: var(--muted); }
+            .type-meta { text-align: right; }
+
+            .tracking-graph { width: 100%; height: 220px; background: var(--surface); border: 1px solid var(--border-subtle); border-radius: 12px; }
+            .tracking-axis { stroke: var(--border); stroke-dasharray: 4 4; }
+            .tracking-path { fill: none; stroke: var(--fg); stroke-width: 2; }
+            .tracking-dot { fill: var(--bg); stroke: var(--accent); stroke-width: 2; }
+            .tracking-label { fill: var(--muted); font-size: 12px; text-anchor: middle; }
+            .tracking-label.is-start { text-anchor: start; }
+
+            .toast {
+                position: fixed;
+                left: 50%;
+                bottom: 24px;
+                transform: translate(-50%, 12px);
+                background: var(--fg);
+                color: var(--bg);
+                font-size: 14px;
+                font-weight: 500;
+                padding: 8px 16px;
+                border-radius: 999px;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.15s ease, transform 0.15s ease;
+            }
+            .toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
+
+            @media (max-width: 900px) {
+                .main { grid-template-columns: 1fr; }
+                .panel { position: static; order: 1; }
+            }
+            @media (max-width: 700px) {
+                .type-row { grid-template-columns: minmax(0, 1fr) 56px 64px; }
+                .type-row > :nth-child(1), .type-row > :nth-child(4) { display: none; }
+            }
+        </style>
+        <script type="module" src="app.js"></script>
+    </head>
+    <body>
+        <div class="page">
+            <a class="back" href="/">&larr; Julian Francis Kelly</a>
+            <h1>Type Scale</h1>
+            <p class="subtitle">A modular scale with tracking that tightens as type grows and line heights snapped to a 2 or 4px grid. Drag the handles on the curves, click a row to copy its CSS, or copy the whole scale.</p>
+
+            <div class="main">
+                <aside class="panel" aria-label="Settings">
+                    <div class="panel-section">
+                        <h2>Scale</h2>
+                        <div id="sizeCurve"></div>
+                        <div class="field-row">
+                            <label class="field">Base size (px)
+                                <input type="number" id="base" min="8" max="32" step="1">
+                            </label>
+                            <label class="field">Ratio
+                                <input type="number" id="ratio" min="1" max="2" step="0.001">
+                            </label>
+                        </div>
+                        <label class="field">Ratio preset
+                            <select id="ratioPreset"></select>
+                        </label>
+                        <div class="field-row">
+                            <label class="field">Steps below
+                                <input type="number" id="stepsBelow" min="0" max="8" step="1">
+                            </label>
+                            <label class="field">Steps above
+                                <input type="number" id="stepsAbove" min="0" max="12" step="1">
+                            </label>
+                        </div>
+                        <label class="checkbox-field"><input type="checkbox" id="round"> Round to whole pixels</label>
+                    </div>
+
+                    <div class="panel-section">
+                        <h2>Tracking curve</h2>
+                        <div id="trackingCurve"></div>
+                        <label class="field">All-caps add (%)
+                            <input type="number" id="allCapsAdjustment" step="0.5">
+                        </label>
+                        <label class="checkbox-field"><input type="checkbox" id="allCaps"> Preview all caps</label>
+                    </div>
+
+                    <div class="panel-section">
+                        <h2>Line height</h2>
+                        <div class="field-row">
+                            <label class="field">Body ratio
+                                <input type="number" id="bodyRatio" min="1" max="2.5" step="0.05">
+                            </label>
+                            <label class="field">Heading ratio
+                                <input type="number" id="headingRatio" min="1" max="2.5" step="0.05">
+                            </label>
+                        </div>
+                        <label class="field">Headings start at step
+                            <input type="number" id="headingFromStep" min="0" max="12" step="1">
+                        </label>
+                    </div>
+
+                    <div class="panel-section">
+                        <h2>Preview</h2>
+                        <label class="field">Sample text
+                            <input type="text" id="sample">
+                        </label>
+                        <label class="field">Sample weight
+                            <select id="weight">
+                                <option value="400">Regular · 400</option>
+                                <option value="500">Medium · 500</option>
+                                <option value="700">Bold · 700</option>
+                                <option value="900">Ultra Black · 900</option>
+                            </select>
+                        </label>
+                    </div>
+                </aside>
+
+                <div class="output">
+                    <section class="output-section">
+                        <div class="output-header">
+                            <h2>Scale</h2>
+                            <p>Click a row to copy its CSS.</p>
+                        </div>
+                        <div class="type-table" id="typeTable" aria-live="polite"></div>
+                        <div class="actions">
+                            <button type="button" class="btn" data-export="css">Copy CSS</button>
+                            <button type="button" class="btn" data-export="json">Copy tokens JSON</button>
+                            <button type="button" class="btn" data-export="tailwind">Copy Tailwind</button>
+                            <button type="button" class="btn btn-quiet" id="reset">Reset</button>
+                        </div>
+                    </section>
+                    <section class="output-section">
+                        <div class="output-header">
+                            <h2>Tracking curve</h2>
+                            <p>Positive below the base, negative above, tapering toward the limit.</p>
+                        </div>
+                        <svg id="trackingGraph" class="tracking-graph" role="img" aria-label="Tracking percentage by rendered size"></svg>
+                    </section>
+                </div>
+            </div>
+        </div>
+        <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </body>
+</html>
