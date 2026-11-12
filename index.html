@@ -702,6 +702,7 @@
                 document.getElementById("theme-toggle").style.opacity = "1";
             };
         </script>
+        <script src="walk-rig.js"></script>
         <script type="module">
             import { rybHsl2rgb } from "https://esm.sh/rybitten/";
             import { cubes } from "https://esm.sh/rybitten/cubes";
@@ -821,6 +822,7 @@
                 arcMax: 0,
                 decay: 0.05,
                 speed: 0.3,
+                gait: 0.5, // 0 shuffle, 0.5 walk, 1 run
                 density: 0.1,
                 spread: 0.45,
                 rings: 7 / 9,
@@ -997,97 +999,260 @@
                 }
             }
 
-            // --- Main animation loop ---
+            // --- Main animation loop: the walking guy ---
+            // The figure is a fixed field of LED dots; a dot lights when the animated
+            // skeleton's body covers it. Rig core lives in window.WalkRig (script above).
+            const W = window.WalkRig;
+            const RIG_VIEW = { x: 140, y: 115, w: 220, h: 270 }; // rig units framing the figure
+            const RIG_DOT_R = 4;
+            const DOT_PITCH = 12.4; // spacing of obstacle and ground dots, matches the figure's field
+            const walkField = W.buildField({ seed: 7 });
+            const walkDotRand = walkField.map(() => rng());
+            const reduceMotion = window.matchMedia(
+                "(prefers-reduced-motion: reduce)",
+            ).matches;
+            const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
+            let walkPhase = 0;
+            let walkClock = 0;
+
+            // Ground line: the bottom of the feet in the drawn pose.
+            const restPose = W.pose(0, W.REST);
+            const GROUND = Math.max(...restPose.legs.map((l) => l[2][1])) + W.BODY.rLeg;
+
+            // --- Minigame: jump over dot obstacles (space, up arrow or tap) ---
+            const JUMP_V = 560; // takeoff speed, rig units/s
+            const GRAVITY = 1700; // rig units/s², ~0.66s airtime, ~92u peak
+            const RUN_POSE = Object.assign(W.blendGait(W.DEFAULTS, 1), { footLock: 0 });
+            const game = {
+                mode: "idle", // idle | play | over
+                jumpY: 0,
+                jumpV: 0,
+                airborne: false,
+                obstacles: [], // { x, heights: [rows per column] } in rig units
+                speed: 0,
+                elapsed: 0,
+                score: 0,
+                overAt: 0,
+                groundX: 0,
+                runK: 0, // 0 walk .. 1 running, eases in while playing
+                stageK: 0, // phones: eases to 1 once a game starts, shrinking the figure for look-ahead room
+                hi: 0,
+            };
+            try {
+                game.hi = +localStorage.getItem("walkerHi") || 0;
+            } catch (e) {}
+            let gameReady = false; // set once the intro has faded the figure in
+
+            function jump() {
+                if (!gameReady) return;
+                const now = performance.now();
+                if (game.mode === "over") {
+                    if (now - game.overAt < 500) return;
+                    game.mode = "idle";
+                }
+                if (game.mode === "idle") {
+                    game.mode = "play";
+                    game.obstacles = [];
+                    game.speed = 340;
+                    game.elapsed = 0;
+                    game.score = 0;
+                }
+                if (!game.airborne) {
+                    game.airborne = true;
+                    game.jumpV = JUMP_V;
+                }
+            }
+            window.addEventListener("keydown", (e) => {
+                if (!["Space", "ArrowUp", "KeyW"].includes(e.code)) return;
+                if (e.target.closest && e.target.closest("#controls-wrap, input, textarea")) return;
+                e.preventDefault();
+                if (!e.repeat) jump();
+            });
+            wrap.addEventListener("pointerdown", (e) => {
+                if (e.target.closest("a, button, #controls-wrap")) return;
+                jump();
+            });
+
+            // Obstacles and ground fade out just past the figure, so they never run under the text.
+            const TRAIL_END = RIG_VIEW.x - 30; // rig x where the fade-out finishes
+            const TRAIL_FADE = 110;
+            const trailAlpha = (x) => clamp((x - TRAIL_END) / TRAIL_FADE, 0, 1);
+
+            function spawnObstacle(x) {
+                const cols = 1 + Math.floor(Math.random() * 3);
+                const heights = [];
+                for (let i = 0; i < cols; i++) heights.push(2 + Math.floor(Math.random() * 3));
+                game.obstacles.push({ x, heights });
+            }
+            function obstacleDots(o) {
+                const dots = [];
+                o.heights.forEach((rows, ci) => {
+                    for (let r = 0; r < rows; r++)
+                        dots.push([o.x + ci * DOT_PITCH, GROUND - RIG_DOT_R - r * DOT_PITCH]);
+                });
+                return dots;
+            }
+            // Forgiving hit test: a dot must sit a little inside the body to count.
+            function hits(x, y, bones) {
+                for (const b of bones) if (W.capsule(x, y, b) < -1.5) return true;
+                return false;
+            }
+
+            function stepGame(dt, rightEdge, bones) {
+                if (game.airborne) {
+                    game.jumpV -= GRAVITY * dt;
+                    game.jumpY += game.jumpV * dt;
+                    if (game.jumpY <= 0) {
+                        game.jumpY = 0;
+                        game.jumpV = 0;
+                        game.airborne = false;
+                    }
+                }
+                game.runK += ((game.mode === "play" ? 1 : 0) - game.runK) * Math.min(1, dt * 3);
+                game.stageK += ((game.mode === "idle" ? 0 : 1) - game.stageK) * Math.min(1, dt * 4);
+                if (game.mode !== "play") return;
+
+                game.elapsed += dt;
+                game.speed = Math.min(620, 340 + game.elapsed * 6);
+                game.score += (dt * game.speed) / 30;
+                game.groundX = (game.groundX + game.speed * dt) % DOT_PITCH;
+                for (const o of game.obstacles) o.x -= game.speed * dt;
+                game.obstacles = game.obstacles.filter((o) => o.x > TRAIL_END - 40);
+                const last = game.obstacles[game.obstacles.length - 1];
+                const gap = game.speed * (0.85 + Math.random() * 1.1);
+                // Spawn off the right edge, but never closer than ~1s ahead of the figure.
+                if (!last || last.x < rightEdge - gap)
+                    spawnObstacle(Math.max(rightEdge + 20, 250 + game.speed * 1.1));
+
+                for (const o of game.obstacles)
+                    for (const [x, y] of obstacleDots(o))
+                        if (hits(x, y + game.jumpY, bones)) {
+                            game.mode = "over";
+                            game.overAt = performance.now();
+                            if (game.score > game.hi) {
+                                game.hi = Math.floor(game.score);
+                                try {
+                                    localStorage.setItem("walkerHi", String(game.hi));
+                                } catch (e) {}
+                            }
+                            return;
+                        }
+            }
+
             let prevT = performance.now();
             function frame(now) {
-                const dt = (now - prevT) / 1000;
+                const dt = Math.min(0.1, (now - prevT) / 1000);
                 prevT = now;
-                time += dt * mapVal(params.speed, 0, 1, 0.15, 3);
+                const speedMul = mapVal(params.speed, 0, 1, 0.15, 3);
+                time += dt * speedMul;
 
                 const dpr = window.devicePixelRatio || 1;
                 const w = canvas.width / dpr,
                     h = canvas.height / dpr;
-                const scale = (Math.min(w, h) / 900) * (w < 600 ? 1.75 : 1.25);
                 ctx.clearRect(0, 0, w, h);
 
-                const cycleSec = ANIM_FRAMES / 60; // seconds per animation cycle at base speed
-                const cycleProgress = (time / cycleSec) % 1;
-                const cx = w / 2,
-                    cy = h / 2;
+                // Rig controls: gait slider blends shuffle <-> walk <-> run; playing breaks into a run.
+                const userGait = mapVal(params.gait, 0, 1, -1, 1);
+                const gait = userGait + (Math.max(userGait, 0.8) - userGait) * game.runK;
+                let c = Math.abs(gait) < 0.01 ? W.DEFAULTS : W.blendGait(W.DEFAULTS, gait);
+                c = W.applyVariation(c, 0.5, walkClock);
+                if (!reduceMotion && game.mode !== "over") {
+                    walkClock += dt * speedMul;
+                    walkPhase = (walkPhase + (dt * speedMul * c.speed) / 120) % 1; // one cycle = two steps
+                }
+                let P;
+                if (game.airborne) P = W.pose(0.3, RUN_POSE); // knee-up leap, held while in the air
+                else if (reduceMotion) P = W.pose(0, W.REST);
+                else P = W.pose(walkPhase, c);
 
-                // Current ring count from the slider (1..MAX_RINGS)
-                const activeRings = Math.round(
-                    mapVal(params.rings, 0, 1, 1, MAX_RINGS),
-                );
+                // Fit the figure to the container, centered. On phones a running game
+                // shrinks it and moves it left so obstacles show up with time to react.
+                const stage = w < 600 ? game.stageK : 0;
+                const s =
+                    Math.min((h * (w < 600 ? 0.6 : 0.68)) / RIG_VIEW.h, (w * 0.85) / RIG_VIEW.w) *
+                    (1 - 0.4 * stage);
+                const ox = w * (0.5 - 0.18 * stage) - (RIG_VIEW.x + RIG_VIEW.w / 2) * s;
+                const oy = h / 2 - (RIG_VIEW.y + RIG_VIEW.h / 2) * s;
 
-                // Star spacing along each ring, affected by the "spread" slider
-                const starGap =
-                    STAR_SPACING *
-                    scale *
-                    mapVal(params.spread, 0, 1, 0.4, 1.6);
+                const fade = clamp(params.arcMax / 0.6, 0, 1); // intro bloom
+                if (fade >= 0.5) gameReady = true;
+                stepGame(dt, (w - ox) / s, P.bones);
 
-                const maxRingRadius =
-                    starGap * (activeRings - 1 + 0.5) + starGap / 4;
+                // Hue wave: sweeps from base hue by hueShift and back over 20s, lagging
+                // from head to feet so the color travels down the figure.
+                const hueAt = (yRig, jitter) => {
+                    const yNorm = clamp((yRig - RIG_VIEW.y) / RIG_VIEW.h, 0, 1);
+                    const huePhase = (TWO_PI * now) / HUE_WAVE_PERIOD - yNorm * HUE_WAVE_LAG;
+                    return (
+                        params.hue * 360 +
+                        ((params.hueShift * 360) / 2) * (1 - Math.cos(huePhase)) +
+                        jitter * params.hueSpread * 360
+                    );
+                };
+                const dot = (x, y, color) => {
+                    ctx.fillStyle = color;
+                    ctx.beginPath();
+                    ctx.arc(ox + x * s, oy + y * s, RIG_DOT_R * s, 0, TWO_PI);
+                    ctx.fill();
+                };
 
-                // Arc wave: a sine wave radiating outward from center, synced to animation cycle.
-                // Each star's visible arc oscillates between ARC_MIN and arcMax, with inner stars
-                // leading and outer stars lagging — creating a breathing/pulsing radial effect.
-                const arcWavePhase = (time / cycleSec) * TWO_PI;
+                if (fade > 0) {
+                    const fg = getComputedStyle(document.documentElement).getPropertyValue("--fg").trim();
 
-                // Walk through each ring, then each star in that ring
-                let starIndex = 0;
-                for (let ri = 0; ri < activeRings; ri++) {
-                    // Hue wave: sweeps from base hue to +82° and back over 20s,
-                    // inner rings lead and outer rings lag behind.
-                    const ringNorm = activeRings > 1 ? ri / (activeRings - 1) : 0;
-                    const huePhase = (TWO_PI * now) / HUE_WAVE_PERIOD - ringNorm * HUE_WAVE_LAG;
-                    const ringHue = params.hue * 360 + (params.hueShift * 360 / 2) * (1 - Math.cos(huePhase));
+                    // Ground dots scroll while the game is on.
+                    if (game.mode !== "idle") {
+                        const y = GROUND + DOT_PITCH * 0.75;
+                        ctx.fillStyle = fg;
+                        for (let x = TRAIL_END - game.groundX; x < (w - ox) / s; x += DOT_PITCH) {
+                            ctx.globalAlpha = 0.2 * fade * trailAlpha(x);
+                            ctx.beginPath();
+                            ctx.arc(ox + x * s, oy + y * s, RIG_DOT_R * 0.5 * s, 0, TWO_PI);
+                            ctx.fill();
+                        }
+                        ctx.globalAlpha = 1;
+                    }
 
-                    const starsInRing = STARS_PER_RING[ri];
-                    for (let j = 0; j < starsInRing; j++) {
-                        // Place this star around the ring
-                        const theta =
-                            (TWO_PI / starsInRing) * j +
-                            RING_OFFSETS[ri] * TWO_PI;
-                        const ringRadius = starGap * (ri + 0.5) + starGap / 4;
-                        const starX = ringRadius * Math.cos(theta) + cx;
-                        const starY = ringRadius * Math.sin(theta) + cy;
+                    // Game over swaps the walker for the orange "don't walk" hand, which
+                    // flashes like a crossing signal and then holds steady.
+                    const overT = game.mode === "over" ? (now - game.overAt) / 1000 : -1;
+                    const walkerA = overT < 0 ? 1 : clamp(1 - overT / 0.25, 0, 1);
+                    const handA =
+                        overT < 0.15 ? 0 : overT < 1.95 ? (Math.floor((overT - 0.15) / 0.3) % 2 === 0 ? 1 : 0) : 1;
 
-                        // Radial arc wave: stars closer to center lead, outer stars lag
-                        const distNorm =
-                            maxRingRadius > 0 ? ringRadius / maxRingRadius : 0;
-                        const arcWave =
-                            (Math.sin(arcWavePhase - distNorm * TWO_PI) + 1) /
-                            2; // 0..1
-                        const clampedArcMin = Math.min(ARC_MIN, params.arcMax);
-                        const effectiveArc =
-                            clampedArcMin +
-                            (params.arcMax - clampedArcMin) * arcWave;
+                    for (const o of game.obstacles)
+                        for (const [x, y] of obstacleDots(o))
+                            dot(x, y, rybColor(hueAt(y, 0.25), params.saturation, params.lightness, fade * trailAlpha(x) * walkerA));
 
-                        // All stars in a ring share the same random phase offset (ringRand),
-                        // so the wave front sweeps coherently around each ring (the "rotating" look).
-                        // Integer division on the ring term matches the original Processing sketch.
-                        const starProgress =
-                            (cycleProgress +
-                                normVal(theta, 0, TWO_PI) +
-                                ringRand[ri] +
-                                Math.floor((ri * 2) / activeRings)) %
-                            1;
+                    // The figure, lifted by the jump.
+                    if (walkerA > 0)
+                        for (let i = 0; i < walkField.length; i++) {
+                            const d = walkField[i];
+                            if (!W.inside(d.x, d.y, P.bones)) continue;
+                            const color = rybColor(hueAt(d.y, walkDotRand[i] - 0.5), params.saturation, params.lightness, fade * walkerA);
+                            dot(d.x, d.y - game.jumpY, color);
+                        }
+                    if (handA > 0)
+                        for (const [x, y] of W.STOP_HAND) dot(x, y, `rgba(255,123,0,${handA * fade})`);
 
-                        drawStar(
-                            starX,
-                            starY,
-                            starIndex,
-                            starProgress,
-                            scale,
-                            params,
-                            effectiveArc,
-                            ringHue,
-                        );
-                        starIndex++;
+                    // Score and hints, centered above the head.
+                    if (gameReady) {
+                        const pad = (n) => String(Math.floor(n)).padStart(5, "0");
+                        const hi = game.hi ? "HI " + pad(game.hi) : "";
+                        let text;
+                        if (game.mode === "play") text = pad(game.score) + (hi ? "   " + hi : "");
+                        else if (game.mode === "over")
+                            text = "GAME OVER  " + pad(game.score) + "   " + (coarsePointer ? "TAP" : "SPACE") + " TO RETRY";
+                        else text = (coarsePointer ? "TAP" : "SPACE") + " TO JUMP" + (hi ? "   " + hi : "");
+                        ctx.font = "12px 'Karl Mono', ui-monospace, monospace";
+                        ctx.textAlign = "center";
+                        ctx.fillStyle = fg;
+                        ctx.globalAlpha = game.mode === "idle" ? 0.45 : 0.8;
+                        ctx.fillText(text, w / 2, oy + (RIG_VIEW.y - 18) * s);
+                        ctx.globalAlpha = 1;
                     }
                 }
-                // Update --accent to follow the hue wave (use center ring's hue)
+
+                // Update --accent to follow the hue wave
                 const accentHuePhase = (TWO_PI * now) / HUE_WAVE_PERIOD;
                 const accentHue = params.hue * 360 + (params.hueShift * 360 / 2) * (1 - Math.cos(accentHuePhase));
                 const [aR, aG, aB] = rybHsl2rgb([accentHue % 360, params.saturation, params.lightness], { cube: hypercardCube });
@@ -1111,15 +1276,14 @@
 
             const SLIDERS = [
                 {
-                    key: "rings",
-                    label: "Rings",
-                    display: (v) => Math.round(mapVal(v, 0, 1, 1, MAX_RINGS)),
+                    key: "gait",
+                    label: "Gait",
+                    display: (v) => {
+                        const g = Math.round(mapVal(v, 0, 1, -100, 100));
+                        return g === 0 ? "Walk" : g < 0 ? "Shuffle " + -g + "%" : "Run " + g + "%";
+                    },
                 },
-                { key: "arcMax", label: "Dot Arc Max" },
-                { key: "decay", label: "Dot Decay" },
-                { key: "density", label: "Dot Density" },
                 { key: "speed", label: "Speed" },
-                { key: "spread", label: "Star Spread" },
                 {
                     key: "lightness",
                     label: "Lightness",
